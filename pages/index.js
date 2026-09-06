@@ -33,7 +33,6 @@ export default function Home() {
   const [newMealProtein, setNewMealProtein] = useState('')
   const [newMealFat, setNewMealFat] = useState('')
 
-  // Schone, lege weekstructuur
   const [weekSchedule, setWeekSchedule] = useState({
     'Maandag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
     'Dinsdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
@@ -44,7 +43,6 @@ export default function Home() {
     'Zondag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' }
   })
 
-  // Lege maaltijdenbibliotheek
   const [mealLibrary, setMealLibrary] = useState([])
 
   useEffect(() => {
@@ -170,6 +168,8 @@ export default function Home() {
     )
   }
 
+  const role = profile?.role || 'ATHLETE'
+  const isCoachOrAdmin = role === 'COACH' || role === 'ADMIN'
   const currentInfo = weekSchedule[currentActiveDay] || {}
 
   return (
@@ -180,8 +180,10 @@ export default function Home() {
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: '1.2rem', fontWeight: '800' }}>⚡ 70.3 Triatlon Hub</span>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', background: 'rgba(37, 99, 235, 0.3)', border: '1px solid #3b82f6', color: '#93c5fd', padding: '3px 10px', borderRadius: '12px', fontWeight: '600' }}>🏃‍♀️ Atlete: Liesbeth</span>
-            <span style={{ fontSize: '0.75rem', background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', color: '#34d399', padding: '3px 10px', borderRadius: '12px', fontWeight: '600' }}>● Garmin Live Sync Ready</span>
+            <span style={{ fontSize: '0.75rem', background: 'rgba(37, 99, 235, 0.3)', border: '1px solid #3b82f6', color: '#93c5fd', padding: '3px 10px', borderRadius: '12px', fontWeight: '600' }}>
+              {role === 'COACH' ? '⚙️ Coach: Kaat' : role === 'ADMIN' ? '👑 Admin' : '🏃‍♀️ Atlete: Liesbeth'}
+            </span>
+            <span style={{ fontSize: '0.75rem', background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', color: '#34d399', padding: '3px 10px', borderRadius: '12px', fontWeight: '600' }}>● Garmin Sync Ready</span>
             <button onClick={handleLogout} style={{ background: 'none', border: '1px solid #475569', color: '#cbd5e1', padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', marginLeft: '8px' }}>Uitloggen</button>
           </div>
         </div>
@@ -190,10 +192,28 @@ export default function Home() {
       {/* Navigatiebalk */}
       <nav style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '8px 16px', position: 'sticky', top: 0, zIndex: 1000, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', gap: '10px', overflowX: 'auto' }}>
+          {isCoachOrAdmin && (
+            <button
+              onClick={() => setActiveTab('coach')}
+              style={{
+                padding: '8px 16px',
+                fontSize: '0.82rem',
+                fontWeight: '700',
+                cursor: 'pointer',
+                borderRadius: '8px',
+                whiteSpace: 'nowrap',
+                border: '1px solid transparent',
+                background: activeTab === 'coach' ? '#2563eb' : 'none',
+                color: activeTab === 'coach' ? '#ffffff' : '#64748b'
+              }}
+            >
+              ⚙️ Coach Mode (Kaat)
+            </button>
+          )}
+
           {[
-            { id: 'coach', label: '⚙️ Coach Mode (Kaat)' },
-            { id: 'week', label: '📅 Weekplanning' },
             { id: 'vandaag', label: '🏠 Vandaag' },
+            { id: 'week', label: '📅 Weekplanning' },
             { id: 'maaltijden', label: '🥗 Gerechten' },
             { id: 'boodschappen', label: '🛒 Mealprep' },
             { id: 'gezondheid', label: '❤️ Gezondheid & Garmin' }
@@ -221,8 +241,8 @@ export default function Home() {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
 
-        {/* TAB 1: COACH MODE (KAAT) */}
-        {activeTab === 'coach' && (
+        {/* TAB 1: COACH MODE (ALLEEN ZICHTBAAR VOOR KAAT / ADMIN) */}
+        {activeTab === 'coach' && isCoachOrAdmin && (
           <div>
             <div style={{ fontWeight: '800', fontSize: '1.1rem', color: '#0f172a', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
               <span>📊 Belasting & Progressie van Liesbeth</span>
@@ -282,30 +302,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB 2: WEEKPLANNING */}
-        {activeTab === 'week' && (
-          <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>📅 Weekplanning van Liesbeth</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px' }}>
-              {['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'].map(day => {
-                const info = weekSchedule[day] || {}
-                return (
-                  <div key={day} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
-                    <div style={{ fontWeight: '700', fontSize: '0.95rem', color: '#0f172a', marginBottom: '8px', borderBottom: '2px solid #e2e8f0', paddingBottom: '6px' }}>{day}</div>
-                    <div style={{ fontSize: '0.82rem', fontWeight: '700', color: info.type === 'Nog niet ingepland' ? '#94a3b8' : '#2563eb', marginBottom: '4px' }}>🏋️ {info.type} {info.duration && `(${info.duration})`}</div>
-                    <div style={{ fontSize: '0.82rem', color: '#334155', whiteSpace: 'pre-line', marginBottom: '8px' }}>{info.target || 'Geen blokken ingevoerd.'}</div>
-                    <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                      • <strong>RPE Feedback:</strong> {info.rpe ? `${info.rpe}/10` : 'Nog niet ingevuld'}<br/>
-                      • <strong>Opmerking:</strong> {info.feedback || '-'}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3: VANDAAG */}
+        {/* TAB: VANDAAG */}
         {activeTab === 'vandaag' && (
           <div>
             <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
@@ -342,7 +339,30 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB 4: MAALTIJDEN BEHEREN */}
+        {/* TAB: WEEKPLANNING */}
+        {activeTab === 'week' && (
+          <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>📅 Weekplanning van Liesbeth</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px' }}>
+              {['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'].map(day => {
+                const info = weekSchedule[day] || {}
+                return (
+                  <div key={day} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
+                    <div style={{ fontWeight: '700', fontSize: '0.95rem', color: '#0f172a', marginBottom: '8px', borderBottom: '2px solid #e2e8f0', paddingBottom: '6px' }}>{day}</div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: '700', color: info.type === 'Nog niet ingepland' ? '#94a3b8' : '#2563eb', marginBottom: '4px' }}>🏋️ {info.type} {info.duration && `(${info.duration})`}</div>
+                    <div style={{ fontSize: '0.82rem', color: '#334155', whiteSpace: 'pre-line', marginBottom: '8px' }}>{info.target || 'Geen blokken ingevoerd.'}</div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                      • <strong>RPE Feedback:</strong> {info.rpe ? `${info.rpe}/10` : 'Nog niet ingevuld'}<br/>
+                      • <strong>Opmerking:</strong> {info.feedback || '-'}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* TAB: MAALTIJDEN BEHEREN */}
         {activeTab === 'maaltijden' && (
           <div>
             <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
@@ -384,7 +404,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB 5: MEALPREP & BOODSCHAPPEN */}
+        {/* TAB: MEALPREP & BOODSCHAPPEN */}
         {activeTab === 'boodschappen' && (
           <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
             <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>🛒 Boodschappenlijst</h3>
@@ -392,7 +412,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB 6: GEZONDHEID & GARMIN */}
+        {/* TAB: GEZONDHEID & GARMIN */}
         {activeTab === 'gezondheid' && (
           <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
