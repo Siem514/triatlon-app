@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-// Uitgebreide alfabetische ingrediëntenlijst met voedingswaarden per 100g
 const INGREDIENT_DATABASE = [
   { name: 'Aardappel (Gekookt)', kcal: 85, carbs: 17, protein: 2, fat: 0.1 },
   { name: 'Avocado', kcal: 160, carbs: 9, protein: 2, fat: 15 },
@@ -36,6 +35,7 @@ export default function Home() {
 
   const [activeTab, setActiveTab] = useState('vandaag')
   const [currentActiveDay, setCurrentActiveDay] = useState('Zondag')
+  const [weekOffset, setWeekOffset] = useState(0) // 0 = huidige week, -1 = vorige week, +1 = volgende week
 
   // Coach velden state
   const [coachDate, setCoachDate] = useState('')
@@ -53,7 +53,7 @@ export default function Home() {
   // Recepten & Ingrediënten state
   const [newMealName, setNewMealName] = useState('')
   const [newMealCategory, setNewMealCategory] = useState('ontbijt')
-  const [selectedIngredients, setSelectedIngredients] = useState([]) // Gekozen ingrediënten met hoeveelheid
+  const [selectedIngredients, setSelectedIngredients] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [gramsInput, setGramsInput] = useState('100')
 
@@ -69,13 +69,14 @@ export default function Home() {
 
   const [mealLibrary, setMealLibrary] = useState([])
 
-  const getWeekDates = () => {
+  // Dynamische weekdatum-berekening op basis van weekOffset
+  const getWeekDates = (offset) => {
     const now = new Date()
     const currentDay = now.getDay()
     const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay
 
     const monday = new Date(now)
-    monday.setDate(now.getDate() + distanceToMonday)
+    monday.setDate(now.getDate() + distanceToMonday + (offset * 7))
 
     const weekDays = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag']
     const result = {}
@@ -91,7 +92,7 @@ export default function Home() {
     return result
   }
 
-  const weekDates = getWeekDates()
+  const weekDates = getWeekDates(weekOffset)
 
   useEffect(() => {
     const today = new Date()
@@ -131,7 +132,6 @@ export default function Home() {
     }
   }
 
-  // Toevoegen van gekozen ingrediënt uit de alfabetische lijst
   const addIngredientToList = (item) => {
     const grams = parseInt(gramsInput, 10) || 100
     const factor = grams / 100
@@ -154,7 +154,6 @@ export default function Home() {
     setSelectedIngredients(prev => prev.filter(item => item.id !== id))
   }
 
-  // Berekening van totaal berekende macro's van het gerecht
   const totalMacros = selectedIngredients.reduce((acc, curr) => ({
     kcal: acc.kcal + curr.kcal,
     carbs: acc.carbs + curr.carbs,
@@ -279,7 +278,6 @@ export default function Home() {
 
   const currentInfo = weekSchedule[currentActiveDay] || {}
 
-  // Filter ingrediënten op alfabetische volgorde op basis van de zoekopdracht
   const filteredIngredients = INGREDIENT_DATABASE.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -420,12 +418,12 @@ export default function Home() {
             <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#0369a1', marginBottom: '4px' }}>📅 SELECTEER DAG OM TE BEKIJKEN:</label>
               <select value={currentActiveDay} onChange={(e) => setCurrentActiveDay(e.target.value)} style={{ width: '100%', fontSize: '1rem', fontWeight: '800', color: '#2563eb', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                {['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'].map(d => <option key={d}>{d} ({weekDates[d]})</option>)}
+                {['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'].map(d => <option key={d}>{d} ({getWeekDates(0)[d]})</option>)}
               </select>
             </div>
 
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>🚴‍♀️ Training voor Liesbeth ({currentActiveDay} {weekDates[currentActiveDay]})</h3>
+              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>🚴‍♀️ Training voor Liesbeth ({currentActiveDay} {getWeekDates(0)[currentActiveDay]})</h3>
               <div style={{ fontWeight: '700', fontSize: '0.9rem', marginBottom: '4px', color: currentInfo.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a' }}>{currentInfo.type} {currentInfo.duration && `(${currentInfo.duration})`}</div>
               <div style={{ fontSize: '0.85rem', color: '#334155', whiteSpace: 'pre-line', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '10px' }}>{currentInfo.target || 'Nog geen trainingsdoelen ingepland.'}</div>
               {currentInfo.note && <div style={{ fontSize: '0.82rem', color: '#1e293b', background: '#eff6ff', padding: '8px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>💬 <strong>Instructies van Kaat:</strong> "{currentInfo.note}"</div>}
@@ -451,10 +449,22 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: WEEKPLANNING */}
+        {/* TAB: WEEKPLANNING & JAARAGENDA NAVIGATIE */}
         {activeTab === 'week' && (
           <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>📅 Weekplanning van Liesbeth (Week van {weekDates['Maandag']} t/m {weekDates['Zondag']})</h3>
+            
+            {/* WEEKNAVIGATIEBALK */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
+              <button onClick={() => setWeekOffset(prev => prev - 1)} style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', fontSize: '0.8rem' }}>← Vorige Week</button>
+              <div style={{ textAlign: 'center' }}>
+                <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>Week van {weekDates['Maandag']} t/m {weekDates['Zondag']}</strong><br/>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  {weekOffset < 0 ? `📜 Historie (${Math.abs(weekOffset)} week/weken geleden)` : weekOffset === 0 ? '📍 Huidige Trainingsweek' : `🔮 Toekomstige Planning (+${weekOffset} week/weken)`}
+                </span>
+              </div>
+              <button onClick={() => setWeekOffset(prev => prev + 1)} style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', fontSize: '0.8rem' }}>Volgende Week →</button>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px' }}>
               {['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'].map(day => {
                 const info = weekSchedule[day] || {}
@@ -488,7 +498,6 @@ export default function Home() {
                 <input type="text" value={newMealName} onChange={(e) => setNewMealName(e.target.value)} placeholder="bijv. Muscle Meat Kip + Broccoli + Zoete Aardappel" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
               </div>
 
-              {/* ALFABETISCHE ZOEKBANK */}
               <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '12px', marginBottom: '12px' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '800', color: '#0369a1', marginBottom: '4px' }}>🔍 ZOEK INGREDIËNT (ALFABETISCH):</label>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
@@ -508,7 +517,6 @@ export default function Home() {
                   />
                 </div>
 
-                {/* SUGGESTIES DROPDOWN */}
                 {searchQuery.length > 0 && (
                   <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', maxHeight: '160px', overflowY: 'auto' }}>
                     {filteredIngredients.length === 0 ? (
@@ -529,7 +537,6 @@ export default function Home() {
                 )}
               </div>
 
-              {/* OVERZICHT GEKOZEN INGREDIËNTEN */}
               {selectedIngredients.length > 0 && (
                 <div style={{ marginBottom: '12px' }}>
                   <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px' }}>TOEGEVOEGDE INGREDIËNTEN:</label>
@@ -544,7 +551,6 @@ export default function Home() {
                 </div>
               )}
 
-              {/* BEREKENDE MACRO'S SAMENVATTING */}
               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', marginBottom: '12px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', textAlign: 'center' }}>
                 <div><div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700' }}>KCAL</div><strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{totalMacros.kcal}</strong></div>
                 <div><div style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: '700' }}>KH (G)</div><strong style={{ fontSize: '1.1rem', color: '#2563eb' }}>{totalMacros.carbs}g</strong></div>
