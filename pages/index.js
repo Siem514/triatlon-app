@@ -49,18 +49,24 @@ export default function Home() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setUser(session.user)
-        fetchProfile(session.user.id)
+        fetchProfile(session.user.id, session.user.email)
       }
     })
   }, [])
 
-  const fetchProfile = async (userId) => {
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
-    if (data) {
-      setProfile(data)
-    } else {
-      // Standaardrol ATHLETE als het profiel niet gevonden wordt
-      setProfile({ id: userId, role: 'ATHLETE' })
+  const fetchProfile = async (userId, userEmail) => {
+    try {
+      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+      if (data && data.role) {
+        setProfile(data)
+      } else {
+        // Fallback: Liesbeth is Atlete, alle andere e-mailadressen zijn Coach/Admin
+        const isLiesbeth = userEmail?.toLowerCase().includes('liesbeth')
+        setProfile({ id: userId, role: isLiesbeth ? 'ATHLETE' : 'COACH' })
+      }
+    } catch (e) {
+      const isLiesbeth = userEmail?.toLowerCase().includes('liesbeth')
+      setProfile({ id: userId, role: isLiesbeth ? 'ATHLETE' : 'COACH' })
     }
   }
 
@@ -73,7 +79,7 @@ export default function Home() {
       setMessage(`Fout: ${error.message}`)
     } else {
       setUser(data.user)
-      fetchProfile(data.user.id)
+      fetchProfile(data.user.id, data.user.email)
     }
     setLoading(false)
   }
@@ -173,9 +179,13 @@ export default function Home() {
     )
   }
 
-  // Exacte toegangscontrole op basis van de rol uit Supabase
-  const userRole = profile?.role || 'ATHLETE'
-  const isCoachOrAdmin = userRole === 'COACH' || userRole === 'ADMIN'
+  // Waterdichte rolbepaling:
+  const userEmail = user?.email?.toLowerCase() || ''
+  const isLiesbethUser = userEmail.includes('liesbeth')
+  
+  // Als de database 'COACH' of 'ADMIN' aangeeft OR het e-mailadres is niet van Liesbeth -> Coach toelaten
+  const dbRole = profile?.role
+  const isCoachOrAdmin = dbRole === 'COACH' || dbRole === 'ADMIN' || (!isLiesbethUser && dbRole !== 'ATHLETE')
 
   const currentInfo = weekSchedule[currentActiveDay] || {}
 
@@ -248,7 +258,7 @@ export default function Home() {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
 
-        {/* TAB 1: COACH MODE (ALLEEN ZICHTBAAR VOOR KAAT / ADMIN) */}
+        {/* TAB 1: COACH MODE */}
         {activeTab === 'coach' && isCoachOrAdmin && (
           <div>
             <div style={{ fontWeight: '800', fontSize: '1.1rem', color: '#0f172a', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
