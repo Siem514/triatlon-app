@@ -49,18 +49,18 @@ export default function Home() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setUser(session.user)
-        fetchProfile(session.user.id, session.user.email)
+        fetchProfile(session.user.id)
       }
     })
   }, [])
 
-  const fetchProfile = async (userId, userEmail) => {
+  const fetchProfile = async (userId) => {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
     if (data) {
       setProfile(data)
     } else {
-      // Fallback als er nog geen profielrij bestaat
-      setProfile({ id: userId, role: userEmail?.includes('liesbeth') ? 'ATHLETE' : 'COACH' })
+      // Standaardrol ATHLETE als het profiel niet gevonden wordt
+      setProfile({ id: userId, role: 'ATHLETE' })
     }
   }
 
@@ -73,7 +73,7 @@ export default function Home() {
       setMessage(`Fout: ${error.message}`)
     } else {
       setUser(data.user)
-      fetchProfile(data.user.id, data.user.email)
+      fetchProfile(data.user.id)
     }
     setLoading(false)
   }
@@ -173,10 +173,9 @@ export default function Home() {
     )
   }
 
-  // Controleer of de gebruiker Coach of Admin is (via profile.role OF via e-mailadres)
-  const isLiesbeth = user?.email?.toLowerCase().includes('liesbeth')
-  const userRole = profile?.role || (isLiesbeth ? 'ATHLETE' : 'COACH')
-  const isCoachOrAdmin = userRole === 'COACH' || userRole === 'ADMIN' || !isLiesbeth
+  // Exacte toegangscontrole op basis van de rol uit Supabase
+  const userRole = profile?.role || 'ATHLETE'
+  const isCoachOrAdmin = userRole === 'COACH' || userRole === 'ADMIN'
 
   const currentInfo = weekSchedule[currentActiveDay] || {}
 
@@ -249,7 +248,7 @@ export default function Home() {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
 
-        {/* TAB 1: COACH MODE */}
+        {/* TAB 1: COACH MODE (ALLEEN ZICHTBAAR VOOR KAAT / ADMIN) */}
         {activeTab === 'coach' && isCoachOrAdmin && (
           <div>
             <div style={{ fontWeight: '800', fontSize: '1.1rem', color: '#0f172a', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
