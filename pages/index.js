@@ -28,6 +28,8 @@ const INGREDIENT_DATABASE = [
   { name: 'Zalmfilet', kcal: 208, carbs: 0, protein: 20, fat: 13 }
 ].sort((a, b) => a.name.localeCompare(b.name))
 
+const DAYS_MAP = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag']
+
 export default function Home() {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -36,13 +38,11 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
-  const daysOfWeekMap = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag']
-
   const [activeTab, setActiveTab] = useState('vandaag')
   const [currentActiveDay, setCurrentActiveDay] = useState('Zondag')
   const [weekOffset, setWeekOffset] = useState(0)
 
-  // Coach velden state
+  // Coach velden state - wordt in useEffect direct gevuld met VANDAAG
   const [coachDate, setCoachDate] = useState('')
   const [coachDay, setCoachDay] = useState('Zondag')
   const [coachTime, setCoachTime] = useState('08:30')
@@ -74,23 +74,22 @@ export default function Home() {
 
   const [mealLibrary, setMealLibrary] = useState([])
 
+  // Foutloze datumberekening op basis van de lokale browserdatum
   const getWeekDates = (offset) => {
     const now = new Date()
-    const dayOfWeek = now.getDay()
-    const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+    const currentDay = now.getDay()
+    const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay
 
-    const monday = new Date(now)
-    monday.setDate(now.getDate() + distanceToMonday + (offset * 7))
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + distanceToMonday + (offset * 7))
 
     const weekDaysOrdered = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag']
     const result = {}
 
-    weekDaysOrdered.forEach((day, index) => {
-      const d = new Date(monday)
-      d.setDate(monday.getDate() + index)
+    weekDaysOrdered.forEach((dayName, index) => {
+      const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + index)
       const dayStr = String(d.getDate()).padStart(2, '0')
       const monthStr = String(d.getMonth() + 1).padStart(2, '0')
-      result[day] = `${dayStr}/${monthStr}/${d.getFullYear()}`
+      result[dayName] = `${dayStr}/${monthStr}/${d.getFullYear()}`
     })
 
     return result
@@ -149,7 +148,7 @@ export default function Home() {
 
   useEffect(() => {
     const today = new Date()
-    const todayDayName = daysOfWeekMap[today.getDay()]
+    const todayDayName = DAYS_MAP[today.getDay()]
     const yyyy = today.getFullYear()
     const mm = String(today.getMonth() + 1).padStart(2, '0')
     const dd = String(today.getDate()).padStart(2, '0')
@@ -181,12 +180,13 @@ export default function Home() {
     }
   }
 
-  const handleDateChange = (selectedDate) => {
-    setCoachDate(selectedDate)
-    if (selectedDate) {
-      const [year, month, day] = selectedDate.split('-').map(Number)
+  // Foutloze verwerking wanneer Kaat een datum aanklikt
+  const handleDateChange = (selectedDateStr) => {
+    setCoachDate(selectedDateStr)
+    if (selectedDateStr) {
+      const [year, month, day] = selectedDateStr.split('-').map(Number)
       const dateObj = new Date(year, month - 1, day)
-      const dayName = daysOfWeekMap[dateObj.getDay()]
+      const dayName = DAYS_MAP[dateObj.getDay()]
       setCoachDay(dayName)
     }
   }
