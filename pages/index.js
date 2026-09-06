@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 export default function Home() {
@@ -10,24 +10,19 @@ export default function Home() {
   const [message, setMessage] = useState('')
 
   const [activeTab, setActiveTab] = useState('vandaag')
-  const [currentActiveDay, setCurrentActiveDay] = useState('Zaterdag')
-  const [currentWeekOffset, setCurrentWeekOffset] = useState(0)
+  const [currentActiveDay, setCurrentActiveDay] = useState('Maandag')
 
   // Coach velden state
   const [coachDate, setCoachDate] = useState('')
   const [coachDay, setCoachDay] = useState('Maandag')
   const [coachTime, setCoachTime] = useState('08:30')
   const [coachType, setCoachType] = useState('Lopen')
-  const [coachDuration, setCoachDuration] = useState('1.0')
-  const [coachRunKm, setCoachRunKm] = useState('')
-  const [coachRunHours, setCoachRunHours] = useState('')
+  const [coachDuration, setCoachDuration] = useState('')
   const [coachRunPace, setCoachRunPace] = useState('')
-  const [coachBikeWatts, setCoachBikeWatts] = useState('')
-  const [coachSwimPace, setCoachSwimPace] = useState('')
   const [coachNotes, setCoachNotes] = useState('')
 
   // Feedback state
-  const [rpeScore, setRpeScore] = useState('7')
+  const [rpeScore, setRpeScore] = useState('5')
   const [coachFeedback, setCoachFeedback] = useState('')
 
   // Nieuwe Maaltijd state
@@ -38,27 +33,19 @@ export default function Home() {
   const [newMealProtein, setNewMealProtein] = useState('')
   const [newMealFat, setNewMealFat] = useState('')
 
-  const daysOfWeekList = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag']
-
+  // Schone, lege weekstructuur
   const [weekSchedule, setWeekSchedule] = useState({
-    'Maandag': { type: 'Rustdag', startTime: '08:00', duration: '0u', target: '-', carbs: '200g KH (Low)', note: 'Volledige rust en spierherstel.', ontbijt: 'Toast met jam/honing + 1 gekookt ei', lunch: 'Volkoren Wrap met 150g Muscle Meat Kip', diner: 'Pasta Bolognese met Mager Rundergehakt', snack: '200g Magere Franse Kwark met blauwe bessen', rpe: '1', feedback: 'Goed uitgerust.' },
-    'Dinsdag': { type: 'Zwemmen', startTime: '07:00', duration: '1.5u', target: 'Inzwemmen: 200m @ 32 m/min\nKern: 8x 100m @ 38 m/min (r20s)\nUitzwemmen: 100m @ 30 m/min', carbs: '320g KH (Medium)', note: 'Techniek en intervallen.', ontbijt: 'Havermout met magere melk + banaan', lunch: '150g Muscle Meat Kipfilet + Zoete Aardappel', diner: 'Vegetarische Curry met Groenten & Rijst', snack: '200g Magere Franse Kwark met blauwe bessen', rpe: '6', feedback: 'Lekker zwemgevoel.' },
-    'Woensdag': { type: 'Koppeltraining', startTime: '08:30', duration: '2.0u', target: 'Fietsen: 1.5u @ 180W Zone 2\nKoppelrun: 30m @ 4:15 min/km', carbs: '450g KH (High)', note: 'Direct overgaan in koppelrun.', ontbijt: 'Havermout met magere melk + banaan', lunch: 'Volkoren Wrap met 150g Muscle Meat Kip', diner: 'Pasta Bolognese met Mager Rundergehakt', snack: '200g Magere Franse Kwark met blauwe bessen', rpe: '8', feedback: 'Zware wissel op de benen.' },
-    'Donderdag': { type: 'Lopen', startTime: '17:30', duration: '12 km', target: 'Inlopen: 15m @ 5:15 min/km\nKern: 4x 1km @ 3:55 min/km (r2m)\nUitlopen: 10m @ 5:20 min/km', carbs: '380g KH (High)', note: 'Strak op tempo lopen na het werk.', ontbijt: 'Toast met jam/honing + 1 gekookt ei', lunch: '150g Muscle Meat Kipfilet + Zoete Aardappel', diner: 'Vegetarische Curry met Groenten & Rijst', snack: '200g Magere Franse Kwark met blauwe bessen', rpe: '7', feedback: 'Pace strak gehouden.' },
-    'Vrijdag': { type: 'Rustdag / Herstel', startTime: '08:00', duration: '0u', target: 'Mobiliteit', carbs: '200g KH (Low)', note: 'Lichte stretch sessie.', ontbijt: 'Toast met jam/honing + 1 gekookt ei', lunch: 'Volkoren Wrap met 150g Muscle Meat Kip', diner: 'Pasta Bolognese met Mager Rundergehakt', snack: '200g Magere Franse Kwark met blauwe bessen', rpe: '2', feedback: 'Mobiliteit gedaan.' },
-    'Zaterdag': { type: 'Fietsen', startTime: '09:00', duration: '3.5u', target: 'Warming up: 15m @ 140W\nKern: 3x 15m @ 195W (5m Z1)\nD2: 45m constant @ 175W\nUittrappen: 10m @ 130W', carbs: '520g KH (Extreme)', note: 'Sleutelsessie voeding/brandstof op de fiets!', ontbijt: 'Havermout met magere melk + banaan', lunch: '150g Muscle Meat Kipfilet + Zoete Aardappel', diner: 'Pasta Bolognese met Mager Rundergehakt', snack: '200g Magere Franse Kwark met blauwe bessen', rpe: '', feedback: '' },
-    'Zondag': { type: 'Lopen', startTime: '10:00', duration: '1.5u', target: 'Inlopen: 10m @ 5:10 min/km\nLange duurloop: 1u10m @ 4:30 min/km\nUitlopen: 10m @ 5:15 min/km', carbs: '380g KH (High)', note: 'Constant tempo vasthouden.', ontbijt: 'Havermout met magere melk + banaan', lunch: 'Volkoren Wrap met 150g Muscle Meat Kip', diner: 'Vegetarische Curry met Groenten & Rijst', snack: '200g Magere Franse Kwark met blauwe bessen', rpe: '', feedback: '' }
+    'Maandag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
+    'Dinsdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
+    'Woensdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
+    'Donderdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
+    'Vrijdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
+    'Zaterdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
+    'Zondag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' }
   })
 
-  const [mealLibrary, setMealLibrary] = useState([
-    { id: 1, name: 'Havermout met magere melk + banaan', category: 'ontbijt', kcal: 410, carbs: 72, protein: 20, fat: 5 },
-    { id: 2, name: 'Toast met jam/honing + 1 gekookt ei', category: 'ontbijt', kcal: 320, carbs: 48, protein: 12, fat: 8 },
-    { id: 3, name: '150g Muscle Meat Kipfilet + Zoete Aardappel', category: 'lunch', kcal: 510, carbs: 58, protein: 38, fat: 9 },
-    { id: 4, name: 'Volkoren Wrap met 150g Muscle Meat Kip', category: 'lunch', kcal: 480, carbs: 45, protein: 35, fat: 12 },
-    { id: 5, name: 'Vegetarische Curry met Groenten & Rijst', category: 'diner', kcal: 590, carbs: 78, protein: 36, fat: 14 },
-    { id: 6, name: 'Pasta Bolognese met Mager Rundergehakt', category: 'diner', kcal: 640, carbs: 82, protein: 32, fat: 16 },
-    { id: 7, name: '200g Magere Franse Kwark met blauwe bessen', category: 'snack', kcal: 180, carbs: 16, protein: 22, fat: 1 }
-  ])
+  // Lege maaltijdenbibliotheek
+  const [mealLibrary, setMealLibrary] = useState([])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -95,34 +82,14 @@ export default function Home() {
   }
 
   const triggerPhotoScan = () => {
-    alert('📸 Camera / Recepten-Scanner:\n\nDeze knop activeert de camera. Onze AI scant de tekst van het recept en voegt de voedingswaarden automatisch toe aan Liesbeth\'s bibliotheek!')
-  }
-
-  const formatDate = (dateObj) => {
-    let day = String(dateObj.getDate())
-    if (day.length < 2) day = '0' + day
-    let month = String(dateObj.getMonth() + 1)
-    if (month.length < 2) month = '0' + month
-    return day + '/' + month + '/' + dateObj.getFullYear()
+    alert('📸 Camera / Recepten-Scanner:\n\nMaak een foto van een recept. Onze AI scant het recept en voegt het direct toe aan de bibliotheek!')
   }
 
   const saveCoachPlan = () => {
-    let duration = coachDuration + 'u'
-    if (coachType === 'Lopen') {
-      if (coachRunKm) duration = coachRunKm + ' km'
-      else if (coachRunHours) duration = coachRunHours + 'u'
+    if (!coachDuration) {
+      alert('Vul a.u.b. de duur of omvang van de training in.')
+      return
     }
-
-    let targetStr = '-'
-    if (coachType === 'Lopen') targetStr = coachRunPace || 'Tempo in blokken'
-    else if (coachType === 'Zwemmen') targetStr = coachSwimPace || '35 m/min in blokken'
-    else if (coachType === 'Fietsen' || coachType === 'Koppeltraining') targetStr = coachBikeWatts || 'Wattage in blokken'
-
-    let carbAdvise = '350g KH (Medium)'
-    let durNum = parseFloat(duration)
-    if (durNum >= 3.0) carbAdvise = '500g+ KH (Extreme)'
-    else if (durNum >= 1.5 || coachType === 'Koppeltraining') carbAdvise = '450g KH (High)'
-    else if (coachType === 'Rustdag') carbAdvise = '200g KH (Low)'
 
     setWeekSchedule(prev => ({
       ...prev,
@@ -130,14 +97,16 @@ export default function Home() {
         ...prev[coachDay],
         type: coachType,
         startTime: coachTime,
-        duration: duration,
-        target: targetStr,
-        carbs: carbAdvise,
-        note: coachNotes
+        duration: coachDuration,
+        target: coachRunPace || '-',
+        note: coachNotes || ''
       }
     }))
 
-    alert(`Trainingsplan van Kaat succesvol opgeslagen voor Liesbeth op ${coachDay}!`)
+    alert(`Training van Kaat opgeslagen voor Liesbeth op ${coachDay}!`)
+    setCoachDuration('')
+    setCoachRunPace('')
+    setCoachNotes('')
   }
 
   const submitFeedback = () => {
@@ -149,11 +118,12 @@ export default function Home() {
         feedback: coachFeedback
       }
     }))
-    alert(`Feedback van Liesbeth (RPE ${rpeScore}) verstuurd naar Kaat!`)
+    alert(`Feedback voor ${currentActiveDay} verstuurd naar Kaat!`)
+    setCoachFeedback('')
   }
 
   const addCustomMeal = () => {
-    if (!newMealName) return alert('Vul een maaltijdnaam in')
+    if (!newMealName) return alert('Vul a.u.b. een maaltijdnaam in.')
     const newMeal = {
       id: Date.now(),
       name: newMealName,
@@ -169,7 +139,7 @@ export default function Home() {
     setNewMealCarbs('')
     setNewMealProtein('')
     setNewMealFat('')
-    alert('Maaltijd succesvol toegevoegd aan de bibliotheek!')
+    alert('Gerecht toegevoegd aan de maaltijdenbibliotheek!')
   }
 
   if (!user) {
@@ -211,7 +181,7 @@ export default function Home() {
           <span style={{ fontSize: '1.2rem', fontWeight: '800' }}>⚡ 70.3 Triatlon Hub</span>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <span style={{ fontSize: '0.75rem', background: 'rgba(37, 99, 235, 0.3)', border: '1px solid #3b82f6', color: '#93c5fd', padding: '3px 10px', borderRadius: '12px', fontWeight: '600' }}>🏃‍♀️ Atlete: Liesbeth</span>
-            <span style={{ fontSize: '0.75rem', background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', color: '#34d399', padding: '3px 10px', borderRadius: '12px', fontWeight: '600' }}>● Garmin Fenix 7 Live Sync</span>
+            <span style={{ fontSize: '0.75rem', background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', color: '#34d399', padding: '3px 10px', borderRadius: '12px', fontWeight: '600' }}>● Garmin Live Sync Ready</span>
             <button onClick={handleLogout} style={{ background: 'none', border: '1px solid #475569', color: '#cbd5e1', padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', marginLeft: '8px' }}>Uitloggen</button>
           </div>
         </div>
@@ -259,40 +229,8 @@ export default function Home() {
               <span style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: '700' }}>Coach Dashboard (Kaat)</span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-              <div style={{ background: '#1e293b', color: 'white', borderRadius: '12px', padding: '14px' }}>
-                <div style={{ fontWeight: '800', fontSize: '0.9rem', color: '#38bdf8', borderBottom: '1px solid #334155', paddingBottom: '4px' }}>🏊 Zwemmen</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', margin: '10px 0', textAlign: 'center' }}>
-                  <div style={{ background: '#334155', padding: '6px 2px', borderRadius: '6px' }}><div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#38bdf8' }}>7.2 km</div><div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>AFSTAND</div></div>
-                  <div style={{ background: '#334155', padding: '6px 2px', borderRadius: '6px' }}><div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#38bdf8' }}>2.5u</div><div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>TIJD</div></div>
-                  <div style={{ background: '#334155', padding: '6px 2px', borderRadius: '6px' }}><div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#34d399' }}>130</div><div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>TSS</div></div>
-                </div>
-                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>CSS tempo 1:35/100m. Volume gestaag opgebouwd.</div>
-              </div>
-
-              <div style={{ background: '#1e293b', color: 'white', borderRadius: '12px', padding: '14px' }}>
-                <div style={{ fontWeight: '800', fontSize: '0.9rem', color: '#34d399', borderBottom: '1px solid #334155', paddingBottom: '4px' }}>🚴 Fietsen</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', margin: '10px 0', textAlign: 'center' }}>
-                  <div style={{ background: '#334155', padding: '6px 2px', borderRadius: '6px' }}><div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#38bdf8' }}>145 km</div><div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>AFSTAND</div></div>
-                  <div style={{ background: '#334155', padding: '6px 2px', borderRadius: '6px' }}><div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#38bdf8' }}>5.0u</div><div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>TIJD</div></div>
-                  <div style={{ background: '#334155', padding: '6px 2px', borderRadius: '6px' }}><div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#34d399' }}>245</div><div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>TSS</div></div>
-                </div>
-                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Sterke Zone 2 ritten. KH-inname (75g/u) op schema.</div>
-              </div>
-
-              <div style={{ background: '#1e293b', color: 'white', borderRadius: '12px', padding: '14px' }}>
-                <div style={{ fontWeight: '800', fontSize: '0.9rem', color: '#fbbf24', borderBottom: '1px solid #334155', paddingBottom: '4px' }}>🏃 Lopen</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', margin: '10px 0', textAlign: 'center' }}>
-                  <div style={{ background: '#334155', padding: '6px 2px', borderRadius: '6px' }}><div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#38bdf8' }}>32 km</div><div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>AFSTAND</div></div>
-                  <div style={{ background: '#334155', padding: '6px 2px', borderRadius: '6px' }}><div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#38bdf8' }}>2.8u</div><div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>TIJD</div></div>
-                  <div style={{ background: '#334155', padding: '6px 2px', borderRadius: '6px' }}><div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#34d399' }}>185</div><div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>TSS</div></div>
-                </div>
-                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Goede balans interval/koppelrun. Kuitverzorging na tempo.</div>
-              </div>
-            </div>
-
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>⚙️ Training Inplannen voor Liesbeth</h3>
+              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>⚙️ Nieuwe Training Inplannen voor Liesbeth</h3>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', background: '#eff6ff', padding: '12px', borderRadius: '8px', border: '1px solid #bfdbfe', marginBottom: '12px' }}>
                 <div>
@@ -324,19 +262,19 @@ export default function Home() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>DUUR (UREN)</label>
-                  <input type="number" step="0.5" value={coachDuration} onChange={(e) => setCoachDuration(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0', boxSizing: 'border-box' }} />
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>DUUR / AFSTAND</label>
+                  <input type="text" value={coachDuration} onChange={(e) => setCoachDuration(e.target.value)} placeholder="bijv. 1.5u of 12 km" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0', boxSizing: 'border-box' }} />
                 </div>
               </div>
 
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>🎯 TEMPO / DOELBLOKKEN</label>
-                <textarea rows="3" value={coachRunPace} onChange={(e) => setCoachRunPace(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0', boxSizing: 'border-box' }} placeholder="Inlopen: 15m @ 5:15 min/km&#10;Kern: 4x 1km @ 3:55 min/km&#10;Uitlopen: 10m"></textarea>
+                <textarea rows="3" value={coachRunPace} onChange={(e) => setCoachRunPace(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0', boxSizing: 'border-box' }} placeholder="Vul hier de doelen of intervallen in..."></textarea>
               </div>
 
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>💬 INSTRUCTIES VAN KAAT</label>
-                <textarea rows="2" value={coachNotes} onChange={(e) => setCoachNotes(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0', boxSizing: 'border-box' }} placeholder="Bijv. Hydratatiebewaking, hartslag in Z2 houden..."></textarea>
+                <textarea rows="2" value={coachNotes} onChange={(e) => setCoachNotes(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0', boxSizing: 'border-box' }} placeholder="Optionele opmerkingen over voeding of hartslag..."></textarea>
               </div>
 
               <button onClick={saveCoachPlan} style={{ width: '100%', background: '#2563eb', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>Opslaan op Liesbeth's Schema</button>
@@ -347,20 +285,18 @@ export default function Home() {
         {/* TAB 2: WEEKPLANNING */}
         {activeTab === 'week' && (
           <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>📅 Jaaragenda & Trainingshistorie van Liesbeth</h3>
+            <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>📅 Weekplanning van Liesbeth</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px' }}>
               {['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'].map(day => {
                 const info = weekSchedule[day] || {}
                 return (
                   <div key={day} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
                     <div style={{ fontWeight: '700', fontSize: '0.95rem', color: '#0f172a', marginBottom: '8px', borderBottom: '2px solid #e2e8f0', paddingBottom: '6px' }}>{day}</div>
-                    <div style={{ fontSize: '0.82rem', fontWeight: '700', color: '#2563eb', marginBottom: '4px' }}>🏋️ {info.type || 'Rustdag'} ({info.duration || '0u'})</div>
-                    <div style={{ fontSize: '0.82rem', color: '#334155', whiteSpace: 'pre-line', marginBottom: '8px' }}>{info.target || '-'}</div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: '700', color: info.type === 'Nog niet ingepland' ? '#94a3b8' : '#2563eb', marginBottom: '4px' }}>🏋️ {info.type} {info.duration && `(${info.duration})`}</div>
+                    <div style={{ fontSize: '0.82rem', color: '#334155', whiteSpace: 'pre-line', marginBottom: '8px' }}>{info.target || 'Geen blokken ingevoerd.'}</div>
                     <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                      • <strong>Ontbijt:</strong> {info.ontbijt}<br/>
-                      • <strong>Lunch:</strong> {info.lunch}<br/>
-                      • <strong>Diner:</strong> {info.diner}<br/>
-                      • <strong>Snack:</strong> {info.snack}
+                      • <strong>RPE Feedback:</strong> {info.rpe ? `${info.rpe}/10` : 'Nog niet ingevuld'}<br/>
+                      • <strong>Opmerking:</strong> {info.feedback || '-'}
                     </div>
                   </div>
                 )
@@ -373,38 +309,17 @@ export default function Home() {
         {activeTab === 'vandaag' && (
           <div>
             <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#0369a1', marginBottom: '4px' }}>📅 SELECTEER ACTIEVE DAG FOCUS:</label>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#0369a1', marginBottom: '4px' }}>📅 SELECTEER DAG OM TE BEKIJKEN:</label>
               <select value={currentActiveDay} onChange={(e) => setCurrentActiveDay(e.target.value)} style={{ width: '100%', fontSize: '1rem', fontWeight: '800', color: '#2563eb', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
                 {['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'].map(d => <option key={d}>{d}</option>)}
               </select>
             </div>
 
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a' }}>🚴‍♀️ Training voor Liesbeth ({currentActiveDay})</h3>
-                <span style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '700' }}>Sleutelsessie</span>
-              </div>
-              <div style={{ fontWeight: '700', fontSize: '0.9rem', marginBottom: '4px' }}>{currentInfo.type} ({currentInfo.duration}) - Start om {currentInfo.startTime || '08:30'}</div>
-              <div style={{ fontSize: '0.85rem', color: '#334155', whiteSpace: 'pre-line', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '10px' }}>{currentInfo.target}</div>
-              <div style={{ fontSize: '0.82rem', color: '#1e293b', background: '#eff6ff', padding: '8px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>💬 <strong>Instructies van Kaat:</strong> "{currentInfo.note || 'Geen opmerkingen'}"</div>
-            </div>
-
-            <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>🥗 Dynamisch Dageetschema (Getimed op Training)</h3>
-              <div style={{ display: 'grid', gap: '10px' }}>
-                <div style={{ padding: '8px 0', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div><strong style={{ fontSize: '0.85rem' }}>07:30 - Pre-Workout Ontbijt</strong><p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>{currentInfo.ontbijt}</p></div>
-                  <button onClick={triggerPhotoScan} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '4px 8px', borderRadius: '6px', fontSize: '0.72rem', cursor: 'pointer' }}>📷 Foto Scan</button>
-                </div>
-                <div style={{ padding: '8px 0', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div><strong style={{ fontSize: '0.85rem' }}>12:30 - Herstellunch (Eiwit + Koolhydraten)</strong><p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>{currentInfo.lunch}</p></div>
-                  <button onClick={triggerPhotoScan} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '4px 8px', borderRadius: '6px', fontSize: '0.72rem', cursor: 'pointer' }}>📷 Foto Scan</button>
-                </div>
-                <div style={{ padding: '8px 0', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div><strong style={{ fontSize: '0.85rem' }}>19:00 - Avondeten</strong><p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>{currentInfo.diner}</p></div>
-                  <button onClick={triggerPhotoScan} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '4px 8px', borderRadius: '6px', fontSize: '0.72rem', cursor: 'pointer' }}>📷 Foto Scan</button>
-                </div>
-              </div>
+              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>🚴‍♀️ Training voor Liesbeth ({currentActiveDay})</h3>
+              <div style={{ fontWeight: '700', fontSize: '0.9rem', marginBottom: '4px', color: currentInfo.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a' }}>{currentInfo.type} {currentInfo.duration && `(${currentInfo.duration})`}</div>
+              <div style={{ fontSize: '0.85rem', color: '#334155', whiteSpace: 'pre-line', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '10px' }}>{currentInfo.target || 'Nog geen trainingsdoelen ingepland.'}</div>
+              {currentInfo.note && <div style={{ fontSize: '0.82rem', color: '#1e293b', background: '#eff6ff', padding: '8px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>💬 <strong>Instructies van Kaat:</strong> "{currentInfo.note}"</div>}
             </div>
 
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
@@ -420,7 +335,7 @@ export default function Home() {
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>OPMERKINGEN VOOR KAAT</label>
-                <textarea rows="2" value={coachFeedback} onChange={(e) => setCoachFeedback(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} placeholder="Gevoel, benen, maag opname..."></textarea>
+                <textarea rows="2" value={coachFeedback} onChange={(e) => setCoachFeedback(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} placeholder="Hoe voelden de benen en de voeding?"></textarea>
               </div>
               <button onClick={submitFeedback} style={{ width: '100%', background: '#2563eb', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>Verstuur Feedback naar Kaat</button>
             </div>
@@ -432,15 +347,15 @@ export default function Home() {
           <div>
             <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#166534', marginBottom: '8px' }}>📸 Recept Scannen via Foto</h3>
-              <p style={{ fontSize: '0.8rem', color: '#166534', marginBottom: '12px' }}>Maak een foto van een recept uit een kookboek. Onze AI herkent automatisch de ingrediënten en berekent de macro's:</p>
+              <p style={{ fontSize: '0.8rem', color: '#166534', marginBottom: '12px' }}>Maak een foto van een recept. De AI herkent automatisch de ingrediënten en voegt ze toe aan de bibliotheek:</p>
               <button onClick={triggerPhotoScan} style={{ width: '100%', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>📸 Maak of Upload Foto van Recept</button>
             </div>
 
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>➕ Handmatig Nieuwe Maaltijd Toevoegen</h3>
+              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>➕ Handmatig Nieuw Gerecht Toevoegen</h3>
               <div style={{ marginBottom: '10px' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>NAAM VAN HET GERECHT</label>
-                <input type="text" value={newMealName} onChange={(e) => setNewMealName(e.target.value)} placeholder="bijv. Muscle Meat Kip + Zoete Aardappel" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+                <input type="text" value={newMealName} onChange={(e) => setNewMealName(e.target.value)} placeholder="bijv. Havermout met Banaan" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '12px' }}>
                 <div><label style={{ display: 'block', fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>KCAL</label><input type="number" value={newMealKcal} onChange={(e) => setNewMealKcal(e.target.value)} style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} /></div>
@@ -452,15 +367,19 @@ export default function Home() {
             </div>
 
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>📖 Liesbeth's Maaltijden Bibliotheek</h3>
-              <div style={{ display: 'grid', gap: '8px' }}>
-                {mealLibrary.map(m => (
-                  <div key={m.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <strong>{m.name}</strong>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{m.kcal} kcal | {m.carbs}g KH | {m.protein}g Eiwit</span>
-                  </div>
-                ))}
-              </div>
+              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>📖 Gerechten Bibliotheek ({mealLibrary.length})</h3>
+              {mealLibrary.length === 0 ? (
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Nog geen gerechten toegevoegd. Maak een foto of voeg er handmatig een toe.</p>
+              ) : (
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  {mealLibrary.map(m => (
+                    <div key={m.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <strong>{m.name}</strong>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{m.kcal} kcal | {m.carbs}g KH | {m.protein}g Eiwit</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -468,17 +387,8 @@ export default function Home() {
         {/* TAB 5: MEALPREP & BOODSCHAPPEN */}
         {activeTab === 'boodschappen' && (
           <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>🛒 Geautomatiseerde Boodschappenlijst</h3>
-            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
-              <div style={{ display: 'grid', gap: '8px', fontSize: '0.85rem', color: '#166534' }}>
-                <div>🛒 <strong>Muscle Meat Kipfilet:</strong> ~1.25 kg (incl. extra voor herstel na fietssessie)</div>
-                <div>🛒 <strong>Mager Rundergehakt:</strong> ~600 gram</div>
-                <div>🛒 <strong>Magere Franse Kwark:</strong> 7x potten (200g)</div>
-                <div>🛒 <strong>Mager Cecemel / Chocomel (0% vet):</strong> 3.5 Liter</div>
-                <div>🛒 <strong>Bananen:</strong> 3 trossen</div>
-              </div>
-            </div>
-            <button onClick={() => alert('Boodschappenlijst gekopieerd!')} style={{ width: '100%', background: '#2563eb', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>Kopieer Boodschappenlijst</button>
+            <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>🛒 Boodschappenlijst</h3>
+            <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '12px' }}>De boodschappenlijst past zich automatisch aan zodra er maaltijden en trainingen worden ingepland.</p>
           </div>
         )}
 
@@ -486,36 +396,10 @@ export default function Home() {
         {activeTab === 'gezondheid' && (
           <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a' }}>❤️ Liesbeth's Garmin Gezondheidsstatistieken & Herstel</h3>
-              <span style={{ fontSize: '0.75rem', background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', color: '#059669', padding: '3px 10px', borderRadius: '12px', fontWeight: '600' }}>● Garmin Fenix 7 Live Sync</span>
+              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a' }}>❤️ Garmin Gezondheidsstatistieken</h3>
+              <span style={{ fontSize: '0.75rem', background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', color: '#059669', padding: '3px 10px', borderRadius: '12px', fontWeight: '600' }}>● Sync Ready</span>
             </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '16px' }}>
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700' }}>⚡ BODY BATTERY</div>
-                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#10b981' }}>88 / 100</div>
-                <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Opgeladen & Hersteld</div>
-              </div>
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700' }}>😴 SLAAP & HERSTELSCORE</div>
-                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#2563eb' }}>84 / 100</div>
-                <div style={{ fontSize: '0.7rem', color: '#64748b' }}>7u 45m (1u 50m Diep)</div>
-              </div>
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700' }}>🔥 TRAININGSREADINESS</div>
-                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#f59e0b' }}>Optimaal</div>
-                <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Klaar voor Sleutelsessie</div>
-              </div>
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700' }}>⚖️ LICHAAMSGEWICHT</div>
-                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a' }}>59.4 kg</div>
-                <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Vet %: 17.2%</div>
-              </div>
-            </div>
-
-            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '12px', borderRadius: '8px', fontSize: '0.85rem', color: '#166534' }}>
-              <strong>💡 Gezondheidsanalyse voor Kaat & Liesbeth:</strong> Liesbeth's herstel- en slaapscores laten zien dat haar spieren volledig zijn hersteld. De Body Battery van 88 geeft groen licht voor de zware fiets-koppelsessie.
-            </div>
+            <p style={{ color: '#64748b', fontSize: '0.85rem' }}>De Garmin Fenix gegevens worden geladen zodra de eerste echte trainings- en hersteldata worden binnengehaald.</p>
           </div>
         )}
 
