@@ -36,11 +36,12 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
-  const daysOfWeekList = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag']
+  // Dagenlijst exact afgestemd op JS Date.getDay() -> 0 = Zondag, 1 = Maandag, ...
+  const daysOfWeekMap = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag']
 
   const [activeTab, setActiveTab] = useState('vandaag')
   const [currentActiveDay, setCurrentActiveDay] = useState('Zondag')
-  const [weekOffset, setWeekOffset] = useState(0) // 0 = huidige week, -1 = vorige week, +1 = volgende week
+  const [weekOffset, setWeekOffset] = useState(0)
 
   // Coach velden state
   const [coachDate, setCoachDate] = useState('')
@@ -74,19 +75,19 @@ export default function Home() {
 
   const [mealLibrary, setMealLibrary] = useState([])
 
-  // Dynamische weekdatum-berekening op basis van weekOffset
+  // Waterdichte datumberekening per dag van de week
   const getWeekDates = (offset) => {
     const now = new Date()
-    const currentDay = now.getDay()
-    const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay
+    const dayOfWeek = now.getDay() // 0 = Zondag, 1 = Maandag...
+    const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
 
     const monday = new Date(now)
     monday.setDate(now.getDate() + distanceToMonday + (offset * 7))
 
-    const weekDays = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag']
+    const weekDaysOrdered = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag']
     const result = {}
 
-    weekDays.forEach((day, index) => {
+    weekDaysOrdered.forEach((day, index) => {
       const d = new Date(monday)
       d.setDate(monday.getDate() + index)
       const dayStr = String(d.getDate()).padStart(2, '0')
@@ -100,10 +101,11 @@ export default function Home() {
   const weekDates = getWeekDates(weekOffset)
 
   useEffect(() => {
+    // Instellen van de actieve dag op de echte dag van vandaag
     const today = new Date()
-    const todayName = daysOfWeekList[today.getDay()]
-    setCurrentActiveDay(todayName)
-    setCoachDay(todayName)
+    const todayDayName = daysOfWeekMap[today.getDay()]
+    setCurrentActiveDay(todayDayName)
+    setCoachDay(todayDayName)
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -132,7 +134,7 @@ export default function Home() {
     setCoachDate(selectedDate)
     if (selectedDate) {
       const dateObj = new Date(selectedDate)
-      const dayName = daysOfWeekList[dateObj.getDay()]
+      const dayName = daysOfWeekMap[dateObj.getDay()]
       setCoachDay(dayName)
     }
   }
@@ -458,7 +460,6 @@ export default function Home() {
         {activeTab === 'week' && (
           <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
             
-            {/* WEEKNAVIGATIEBALK */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
               <button onClick={() => setWeekOffset(prev => prev - 1)} style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', fontSize: '0.8rem' }}>← Vorige Week</button>
               <div style={{ textAlign: 'center' }}>
@@ -510,7 +511,7 @@ export default function Home() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Typ ingrediënt... (bijv. broccoli, kip, havermout)"
+                    placeholder="Typ ingrediënt... (bijv. broccoli, mm, kip, havermout)"
                     style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                   />
                   <input
