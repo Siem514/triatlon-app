@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+// Uitgebreide alfabetische ingrediëntenlijst inclusief Muscle Meat (MM) producten
 const INGREDIENT_DATABASE = [
   { name: 'Aardappel (Gekookt)', kcal: 85, carbs: 17, protein: 2, fat: 0.1 },
   { name: 'Avocado', kcal: 160, carbs: 9, protein: 2, fat: 15 },
@@ -11,16 +12,20 @@ const INGREDIENT_DATABASE = [
   { name: 'Havermout', kcal: 389, carbs: 66, protein: 17, fat: 7 },
   { name: 'Kipfilet (Rauw/Bereid)', kcal: 110, carbs: 0, protein: 23, fat: 1.5 },
   { name: 'Kwark (Mager)', kcal: 52, carbs: 4, protein: 8.5, fat: 0.2 },
+  { name: 'MM Basmati Rijst (Gekookt)', kcal: 120, carbs: 25, protein: 2.5, fat: 0.4 },
+  { name: 'MM Biefstuk Reepjes/Blokjes', kcal: 115, carbs: 0, protein: 22, fat: 2.5 },
+  { name: 'MM Gegaarde Kipfilet Blokjes', kcal: 112, carbs: 0, protein: 24, fat: 1.8 },
+  { name: 'MM Kalkoenfilet Blokjes', kcal: 108, carbs: 0, protein: 24, fat: 1.2 },
+  { name: 'MM Mager Rundergehakt 5%', kcal: 133, carbs: 0, protein: 21, fat: 5 },
+  { name: 'MM Paarden Tartaar', kcal: 105, carbs: 0, protein: 21, fat: 2 },
+  { name: 'MM Zoete Aardappel Blokjes', kcal: 86, carbs: 20, protein: 1.6, fat: 0.1 },
   { name: 'Olijfolie', kcal: 884, carbs: 0, protein: 0, fat: 100 },
   { name: 'Pasta (Gekookt)', kcal: 131, carbs: 25, protein: 5, fat: 1.1 },
   { name: 'Pindakaas', kcal: 588, carbs: 20, protein: 25, fat: 50 },
-  { name: 'Rundergehakt (Mager)', kcal: 158, carbs: 0, protein: 20, fat: 8.5 },
   { name: 'Spinazie', kcal: 23, carbs: 3.6, protein: 2.9, fat: 0.4 },
   { name: 'Tonijn (in eigen nat)', kcal: 113, carbs: 0, protein: 26, fat: 0.9 },
   { name: 'Volkoren Brood', kcal: 247, carbs: 41, protein: 9, fat: 2 },
-  { name: 'Zalmfilet', kcal: 208, carbs: 0, protein: 20, fat: 13 },
-  { name: 'Zilvervliesrijst (Gekookt)', kcal: 111, carbs: 23, protein: 2.6, fat: 0.9 },
-  { name: 'Zoete Aardappel', kcal: 86, carbs: 20, protein: 1.6, fat: 0.1 }
+  { name: 'Zalmfilet', kcal: 208, carbs: 0, protein: 20, fat: 13 }
 ].sort((a, b) => a.name.localeCompare(b.name))
 
 export default function Home() {
