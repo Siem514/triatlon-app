@@ -39,6 +39,7 @@ export default function Home() {
 
   const [activeTab, setActiveTab] = useState('vandaag')
   const [currentActiveDay, setCurrentActiveDay] = useState('Zondag')
+  const [todayFormattedDate, setTodayFormattedDate] = useState('')
   const [weekOffset, setWeekOffset] = useState(0)
   const [weekDates, setWeekDates] = useState({})
 
@@ -162,6 +163,7 @@ export default function Home() {
     const dd = String(now.getDate()).padStart(2, '0')
 
     setCurrentActiveDay(todayName)
+    setTodayFormattedDate(`${dd}/${mm}/${yyyy}`)
     setCoachDay(todayName)
     setCoachDate(`${yyyy}-${mm}-${dd}`)
     setWeekDates(computeClientWeekDates(0))
@@ -504,20 +506,19 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: VANDAAG */}
+        {/* TAB: VANDAAG (RECHTSTREEKS VANDAAG) */}
         {activeTab === 'vandaag' && (
           <div>
-            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#0369a1', marginBottom: '4px' }}>📅 SELECTEER DAG OM TE BEKIJKEN:</label>
-              <select value={currentActiveDay} onChange={(e) => setCurrentActiveDay(e.target.value)} style={{ width: '100%', fontSize: '1rem', fontWeight: '800', color: '#2563eb', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                {WEEKDAYS.map(d => <option key={d}>{d} ({weekDates[d] || ''})</option>)}
-              </select>
-            </div>
-
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>🚴‍♀️ Training voor Liesbeth ({currentActiveDay} {weekDates[currentActiveDay] || ''})</h3>
-              <div style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '4px', color: currentInfo.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a' }}>{currentInfo.type} {currentInfo.duration && `(${currentInfo.duration})`}</div>
-              <div style={{ fontSize: '0.85rem', color: '#334155', whiteSpace: 'pre-line', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>{currentInfo.target || 'Nog geen trainingsdoelen ingepland.'}</div>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>
+                🚴‍♀️ Training voor Liesbeth — {currentActiveDay} ({todayFormattedDate})
+              </h3>
+              <div style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '4px', color: currentInfo.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a' }}>
+                {currentInfo.type} {currentInfo.duration && `(${currentInfo.duration})`}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#334155', whiteSpace: 'pre-line', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
+                {currentInfo.target || 'Nog geen trainingsdoelen ingepland voor vandaag.'}
+              </div>
               
               {currentInfo.note && <div style={{ fontSize: '0.82rem', color: '#1e293b', background: '#eff6ff', padding: '8px', borderRadius: '6px', border: '1px solid #bfdbfe', marginBottom: '12px' }}>💬 <strong>Instructies van Kaat:</strong> "{currentInfo.note}"</div>}
 
@@ -554,7 +555,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: WEEKPLANNING MET DIRECT ZICHTBAAR INTRA-WORKOUT ADVIES */}
+        {/* TAB: WEEKPLANNING */}
         {activeTab === 'week' && (
           <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
@@ -582,7 +583,6 @@ export default function Home() {
                     <div style={{ fontSize: '0.82rem', fontWeight: '700', color: info.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a', marginBottom: '4px' }}>🏋️ {info.type} {info.duration && `(${info.duration})`}</div>
                     <div style={{ fontSize: '0.82rem', color: '#334155', whiteSpace: 'pre-line', marginBottom: '8px' }}>{info.target || 'Geen blokken ingevoerd.'}</div>
 
-                    {/* WEERGEVEN VAN VOEDINGSADVIES IN DE WEEKPLANNING */}
                     {info.type && info.type !== 'Nog niet ingepland' && info.type !== 'Rustdag' && (
                       <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '8px', marginTop: '6px', fontSize: '0.78rem', color: '#047857' }}>
                         <strong>🍼 Intra-Workout Voeding:</strong><br/>
