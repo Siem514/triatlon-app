@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-// Ingebouwde database met voedingswaarden per 100 gram
 const INGREDIENT_DATABASE = {
   'kipfilet': { kcal: 110, carbs: 0, protein: 23, fat: 1.5 },
   'mager rundergehakt': { kcal: 158, carbs: 0, protein: 20, fat: 8.5 },
@@ -25,12 +24,15 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
+  const daysOfWeekList = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag']
+
   const [activeTab, setActiveTab] = useState('vandaag')
-  const [currentActiveDay, setCurrentActiveDay] = useState('Maandag')
+  // Bepaal dynamisch de dag van vandaag (bijv. Zondag op 6 september)
+  const [currentActiveDay, setCurrentActiveDay] = useState('Zondag')
 
   // Coach velden state
   const [coachDate, setCoachDate] = useState('')
-  const [coachDay, setCoachDay] = useState('Maandag')
+  const [coachDay, setCoachDay] = useState('Zondag')
   const [coachTime, setCoachTime] = useState('08:30')
   const [coachType, setCoachType] = useState('Lopen')
   const [coachDuration, setCoachDuration] = useState('')
@@ -47,8 +49,6 @@ export default function Home() {
   const [ingredientsInput, setIngredientsInput] = useState('')
   const [calculatedMacros, setCalculatedMacros] = useState({ kcal: 0, carbs: 0, protein: 0, fat: 0 })
 
-  const daysOfWeekList = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag']
-
   const [weekSchedule, setWeekSchedule] = useState({
     'Maandag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
     'Dinsdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
@@ -62,6 +62,12 @@ export default function Home() {
   const [mealLibrary, setMealLibrary] = useState([])
 
   useEffect(() => {
+    // Automatisch de exacte dag van vandaag instellen op basis van de systeemdatum
+    const today = new Date()
+    const todayName = daysOfWeekList[today.getDay()]
+    setCurrentActiveDay(todayName)
+    setCoachDay(todayName)
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setUser(session.user)
@@ -85,7 +91,6 @@ export default function Home() {
     }
   }
 
-  // Automatisch de dag van de week instellen op basis van de gekozen datum
   const handleDateChange = (selectedDate) => {
     setCoachDate(selectedDate)
     if (selectedDate) {
@@ -95,17 +100,14 @@ export default function Home() {
     }
   }
 
-  // Automatische Macro-berekening op basis van de ingrediënten
   const handleIngredientsChange = (text) => {
     setIngredientsInput(text)
     let totalKcal = 0, totalCarbs = 0, totalProtein = 0, totalFat = 0
 
-    // Ontleed de tekst regel voor regel (bijv. "150g kipfilet")
     const lines = text.toLowerCase().split('\n')
     lines.forEach(line => {
       Object.keys(INGREDIENT_DATABASE).forEach(item => {
         if (line.includes(item)) {
-          // Zoek naar getallen in de regel (bijv. 150 of 150g)
           const match = line.match(/\d+/)
           const grams = match ? parseInt(match[0], 10) : 100
           const factor = grams / 100
