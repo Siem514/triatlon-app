@@ -1,24 +1,28 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+// Uitgebreide alfabetische ingrediëntenlijst met voedingswaarden per 100g
 const INGREDIENT_DATABASE = [
-  { keywords: ['kipfilet', 'kip'], kcal: 110, carbs: 0, protein: 23, fat: 1.5 },
-  { keywords: ['rundergehakt', 'gehakt', 'mager gehakt'], kcal: 158, carbs: 0, protein: 20, fat: 8.5 },
-  { keywords: ['zoete aardappel', 'aardappel'], kcal: 86, carbs: 20, protein: 1.6, fat: 0.1 },
-  { keywords: ['zilvervliesrijst', 'rijst'], kcal: 111, carbs: 23, protein: 2.6, fat: 0.9 },
-  { keywords: ['havermout', 'haver'], kcal: 389, carbs: 66, protein: 17, fat: 7 },
-  { keywords: ['banaan'], kcal: 89, carbs: 23, protein: 1.1, fat: 0.3 },
-  { keywords: ['kwark', 'franse kwark'], kcal: 52, carbs: 4, protein: 8.5, fat: 0.2 },
-  { keywords: ['olijfolie', 'olie'], kcal: 884, carbs: 0, protein: 0, fat: 100 },
-  { keywords: ['pindakaas'], kcal: 588, carbs: 20, protein: 25, fat: 50 },
-  { keywords: ['volkoren brood', 'brood', 'toast'], kcal: 247, carbs: 41, protein: 9, fat: 2 },
-  { keywords: ['ei', 'eieren'], kcal: 155, carbs: 1.1, protein: 13, fat: 11 },
-  { keywords: ['pasta', 'spaghetti', 'macaroni'], kcal: 131, carbs: 25, protein: 5, fat: 1.1 },
-  { keywords: ['chocomel', 'cecemel'], kcal: 60, carbs: 10, protein: 3.5, fat: 0.2 },
-  { keywords: ['tonijn'], kcal: 113, carbs: 0, protein: 26, fat: 0.9 },
-  { keywords: ['zalm'], kcal: 208, carbs: 0, protein: 20, fat: 13 },
-  { keywords: ['avocado'], kcal: 160, carbs: 9, protein: 2, fat: 15 }
-]
+  { name: 'Aardappel (Gekookt)', kcal: 85, carbs: 17, protein: 2, fat: 0.1 },
+  { name: 'Avocado', kcal: 160, carbs: 9, protein: 2, fat: 15 },
+  { name: 'Banaan', kcal: 89, carbs: 23, protein: 1.1, fat: 0.3 },
+  { name: 'Broccoli', kcal: 34, carbs: 7, protein: 2.8, fat: 0.4 },
+  { name: 'Chocomel (Mager/Cecemel)', kcal: 60, carbs: 10, protein: 3.5, fat: 0.2 },
+  { name: 'Ei (1 middelgroot ~50g)', kcal: 155, carbs: 1.1, protein: 13, fat: 11 },
+  { name: 'Havermout', kcal: 389, carbs: 66, protein: 17, fat: 7 },
+  { name: 'Kipfilet (Rauw/Bereid)', kcal: 110, carbs: 0, protein: 23, fat: 1.5 },
+  { name: 'Kwark (Mager)', kcal: 52, carbs: 4, protein: 8.5, fat: 0.2 },
+  { name: 'Olijfolie', kcal: 884, carbs: 0, protein: 0, fat: 100 },
+  { name: 'Pasta (Gekookt)', kcal: 131, carbs: 25, protein: 5, fat: 1.1 },
+  { name: 'Pindakaas', kcal: 588, carbs: 20, protein: 25, fat: 50 },
+  { name: 'Rundergehakt (Mager)', kcal: 158, carbs: 0, protein: 20, fat: 8.5 },
+  { name: 'Spinazie', kcal: 23, carbs: 3.6, protein: 2.9, fat: 0.4 },
+  { name: 'Tonijn (in eigen nat)', kcal: 113, carbs: 0, protein: 26, fat: 0.9 },
+  { name: 'Volkoren Brood', kcal: 247, carbs: 41, protein: 9, fat: 2 },
+  { name: 'Zalmfilet', kcal: 208, carbs: 0, protein: 20, fat: 13 },
+  { name: 'Zilvervliesrijst (Gekookt)', kcal: 111, carbs: 23, protein: 2.6, fat: 0.9 },
+  { name: 'Zoete Aardappel', kcal: 86, carbs: 20, protein: 1.6, fat: 0.1 }
+].sort((a, b) => a.name.localeCompare(b.name))
 
 export default function Home() {
   const [user, setUser] = useState(null)
@@ -46,11 +50,12 @@ export default function Home() {
   const [rpeScore, setRpeScore] = useState('5')
   const [coachFeedback, setCoachFeedback] = useState('')
 
-  // Slimme Maaltijd Invoer state
+  // Recepten & Ingrediënten state
   const [newMealName, setNewMealName] = useState('')
   const [newMealCategory, setNewMealCategory] = useState('ontbijt')
-  const [ingredientsInput, setIngredientsInput] = useState('')
-  const [calculatedMacros, setCalculatedMacros] = useState({ kcal: 0, carbs: 0, protein: 0, fat: 0 })
+  const [selectedIngredients, setSelectedIngredients] = useState([]) // Gekozen ingrediënten met hoeveelheid
+  const [searchQuery, setSearchQuery] = useState('')
+  const [gramsInput, setGramsInput] = useState('100')
 
   const [weekSchedule, setWeekSchedule] = useState({
     'Maandag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
@@ -64,10 +69,9 @@ export default function Home() {
 
   const [mealLibrary, setMealLibrary] = useState([])
 
-  // Functie om de datums van de huidige week te berekenen
   const getWeekDates = () => {
     const now = new Date()
-    const currentDay = now.getDay() // 0 = Zondag, 1 = Maandag...
+    const currentDay = now.getDay()
     const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay
 
     const monday = new Date(now)
@@ -127,36 +131,36 @@ export default function Home() {
     }
   }
 
-  const handleIngredientsChange = (text) => {
-    setIngredientsInput(text)
-    let totalKcal = 0, totalCarbs = 0, totalProtein = 0, totalFat = 0
+  // Toevoegen van gekozen ingrediënt uit de alfabetische lijst
+  const addIngredientToList = (item) => {
+    const grams = parseInt(gramsInput, 10) || 100
+    const factor = grams / 100
 
-    const lines = text.toLowerCase().split('\n')
-    lines.forEach(line => {
-      if (!line.trim()) return
+    const newItem = {
+      id: Date.now(),
+      name: item.name,
+      grams: grams,
+      kcal: Math.round(item.kcal * factor),
+      carbs: Math.round(item.carbs * factor),
+      protein: Math.round(item.protein * factor),
+      fat: Math.round(item.fat * factor)
+    }
 
-      const matchNumber = line.match(/\d+/)
-      const grams = matchNumber ? parseInt(matchNumber[0], 10) : 100
-      const factor = grams / 100
-
-      INGREDIENT_DATABASE.forEach(item => {
-        const found = item.keywords.some(keyword => line.includes(keyword))
-        if (found) {
-          totalKcal += item.kcal * factor
-          totalCarbs += item.carbs * factor
-          totalProtein += item.protein * factor
-          totalFat += item.fat * factor
-        }
-      })
-    })
-
-    setCalculatedMacros({
-      kcal: Math.round(totalKcal),
-      carbs: Math.round(totalCarbs),
-      protein: Math.round(totalProtein),
-      fat: Math.round(totalFat)
-    })
+    setSelectedIngredients(prev => [...prev, newItem])
+    setSearchQuery('')
   }
+
+  const removeIngredientFromList = (id) => {
+    setSelectedIngredients(prev => prev.filter(item => item.id !== id))
+  }
+
+  // Berekening van totaal berekende macro's van het gerecht
+  const totalMacros = selectedIngredients.reduce((acc, curr) => ({
+    kcal: acc.kcal + curr.kcal,
+    carbs: acc.carbs + curr.carbs,
+    protein: acc.protein + curr.protein,
+    fat: acc.fat + curr.fat
+  }), { kcal: 0, carbs: 0, protein: 0, fat: 0 })
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -221,20 +225,22 @@ export default function Home() {
 
   const addCustomMeal = () => {
     if (!newMealName) return alert('Vul a.u.b. een maaltijdnaam in.')
+    if (selectedIngredients.length === 0) return alert('Voeg minstens 1 ingrediënt toe.')
+
     const newMeal = {
       id: Date.now(),
       name: newMealName,
       category: newMealCategory,
-      composition: ingredientsInput,
-      kcal: calculatedMacros.kcal,
-      carbs: calculatedMacros.carbs,
-      protein: calculatedMacros.protein,
-      fat: calculatedMacros.fat
+      composition: selectedIngredients.map(i => `${i.grams}g ${i.name}`).join(', '),
+      kcal: totalMacros.kcal,
+      carbs: totalMacros.carbs,
+      protein: totalMacros.protein,
+      fat: totalMacros.fat
     }
+
     setMealLibrary(prev => [...prev, newMeal])
     setNewMealName('')
-    setIngredientsInput('')
-    setCalculatedMacros({ kcal: 0, carbs: 0, protein: 0, fat: 0 })
+    setSelectedIngredients([])
     alert('Gerecht met berekende macro\'s toegevoegd aan de bibliotheek!')
   }
 
@@ -272,6 +278,11 @@ export default function Home() {
   const isCoachOrAdmin = dbRole === 'COACH' || dbRole === 'ADMIN' || (!isLiesbethUser && dbRole !== 'ATHLETE')
 
   const currentInfo = weekSchedule[currentActiveDay] || {}
+
+  // Filter ingrediënten op alfabetische volgorde op basis van de zoekopdracht
+  const filteredIngredients = INGREDIENT_DATABASE.filter(item =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: '#1e293b' }}>
@@ -440,7 +451,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: WEEKPLANNING MET METEEN DE EXACTE DATUMS */}
+        {/* TAB: WEEKPLANNING */}
         {activeTab === 'week' && (
           <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
             <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>📅 Weekplanning van Liesbeth (Week van {weekDates['Maandag']} t/m {weekDates['Zondag']})</h3>
@@ -466,34 +477,79 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: MAALTIJDEN BEHEREN & SLIMME MACRO BEREKENING */}
+        {/* TAB: MAALTIJDEN BEHEREN & ALFABETISCHE INGREDIËNTEN ZOEKBANK */}
         {activeTab === 'maaltijden' && (
           <div>
-            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#166534', marginBottom: '8px' }}>📸 Recept Scannen via Foto</h3>
-              <p style={{ fontSize: '0.8rem', color: '#166534', marginBottom: '12px' }}>Maak een foto van een recept. De AI herkent automatisch de ingrediënten en voegt ze toe aan de bibliotheek:</p>
-              <button onClick={triggerPhotoScan} style={{ width: '100%', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>📸 Maak of Upload Foto van Recept</button>
-            </div>
-
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>🥗 Slim Gerecht Samenstellen & Macro's Berekenen</h3>
+              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>🥗 Slim Gerecht Samenstellen</h3>
               
-              <div style={{ marginBottom: '10px' }}>
+              <div style={{ marginBottom: '12px' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>NAAM VAN HET GERECHT</label>
-                <input type="text" value={newMealName} onChange={(e) => setNewMealName(e.target.value)} placeholder="bijv. Muscle Meat Kip + Zoete Aardappel" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+                <input type="text" value={newMealName} onChange={(e) => setNewMealName(e.target.value)} placeholder="bijv. Muscle Meat Kip + Broccoli + Zoete Aardappel" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
               </div>
 
-              <div style={{ marginBottom: '10px' }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>INGREDIËNTEN & GEWICHTEN (Onder elkaar invoeren)</label>
-                <textarea rows="4" value={ingredientsInput} onChange={(e) => handleIngredientsChange(e.target.value)} placeholder="bijv.&#10;150g kipfilet&#10;200g zoete aardappel&#10;10g olijfolie" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}></textarea>
-                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Ondersteund: kipfilet, gehakt, zoete aardappel, rijst, havermout, banaan, kwark, olijfolie, pindakaas, brood, ei, pasta, chocomel, tonijn, zalm, avocado.</span>
+              {/* ALFABETISCHE ZOEKBANK */}
+              <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '12px', marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '800', color: '#0369a1', marginBottom: '4px' }}>🔍 ZOEK INGREDIËNT (ALFABETISCH):</label>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Typ ingrediënt... (bijv. broccoli, kip, havermout)"
+                    style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                  />
+                  <input
+                    type="number"
+                    value={gramsInput}
+                    onChange={(e) => setGramsInput(e.target.value)}
+                    placeholder="Gram"
+                    style={{ width: '80px', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: '700' }}
+                  />
+                </div>
+
+                {/* SUGGESTIES DROPDOWN */}
+                {searchQuery.length > 0 && (
+                  <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', maxHeight: '160px', overflowY: 'auto' }}>
+                    {filteredIngredients.length === 0 ? (
+                      <div style={{ padding: '8px', fontSize: '0.8rem', color: '#94a3b8' }}>Geen resultaten gevonden voor "{searchQuery}"</div>
+                    ) : (
+                      filteredIngredients.map(item => (
+                        <div
+                          key={item.name}
+                          onClick={() => addIngredientToList(item)}
+                          style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                        >
+                          <strong>{item.name}</strong>
+                          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>+ Voeg {gramsInput}g toe</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
 
+              {/* OVERZICHT GEKOZEN INGREDIËNTEN */}
+              {selectedIngredients.length > 0 && (
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px' }}>TOEGEVOEGDE INGREDIËNTEN:</label>
+                  <div style={{ display: 'grid', gap: '6px' }}>
+                    {selectedIngredients.map(item => (
+                      <div key={item.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '6px 12px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem' }}>
+                        <span><strong>{item.grams}g</strong> {item.name} ({item.kcal} kcal | {item.carbs}g KH)</span>
+                        <button onClick={() => removeIngredientFromList(item.id)} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700' }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* BEREKENDE MACRO'S SAMENVATTING */}
               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', marginBottom: '12px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', textAlign: 'center' }}>
-                <div><div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700' }}>KCAL</div><strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{calculatedMacros.kcal}</strong></div>
-                <div><div style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: '700' }}>KH (G)</div><strong style={{ fontSize: '1.1rem', color: '#2563eb' }}>{calculatedMacros.carbs}g</strong></div>
-                <div><div style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: '700' }}>EIWIT (G)</div><strong style={{ fontSize: '1.1rem', color: '#16a34a' }}>{calculatedMacros.protein}g</strong></div>
-                <div><div style={{ fontSize: '0.7rem', color: '#d97706', fontWeight: '700' }}>VET (G)</div><strong style={{ fontSize: '1.1rem', color: '#d97706' }}>{calculatedMacros.fat}g</strong></div>
+                <div><div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700' }}>KCAL</div><strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{totalMacros.kcal}</strong></div>
+                <div><div style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: '700' }}>KH (G)</div><strong style={{ fontSize: '1.1rem', color: '#2563eb' }}>{totalMacros.carbs}g</strong></div>
+                <div><div style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: '700' }}>EIWIT (G)</div><strong style={{ fontSize: '1.1rem', color: '#16a34a' }}>{totalMacros.protein}g</strong></div>
+                <div><div style={{ fontSize: '0.7rem', color: '#d97706', fontWeight: '700' }}>VET (G)</div><strong style={{ fontSize: '1.1rem', color: '#d97706' }}>{totalMacros.fat}g</strong></div>
               </div>
 
               <button onClick={addCustomMeal} style={{ width: '100%', background: '#2563eb', color: 'white', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>Opslaan in Bibliotheek</button>
@@ -502,7 +558,7 @@ export default function Home() {
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>📖 Gerechten Bibliotheek ({mealLibrary.length})</h3>
               {mealLibrary.length === 0 ? (
-                <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Nog geen gerechten toegevoegd. Stel hierboven een maaltijd samen met ingrediënten.</p>
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Nog geen gerechten toegevoegd. Stel hierboven een maaltijd samen via de alfabetische zoekbank.</p>
               ) : (
                 <div style={{ display: 'grid', gap: '8px' }}>
                   {mealLibrary.map(m => (
