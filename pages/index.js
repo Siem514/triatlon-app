@@ -36,7 +36,6 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
-  // Dagenlijst exact afgestemd op JS Date.getDay() -> 0 = Zondag, 1 = Maandag, ...
   const daysOfWeekMap = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag']
 
   const [activeTab, setActiveTab] = useState('vandaag')
@@ -56,29 +55,28 @@ export default function Home() {
   const [rpeScore, setRpeScore] = useState('5')
   const [coachFeedback, setCoachFeedback] = useState('')
 
-  // Recepten & Ingrediënten state
+  // Recepten & Ingrediënten state (Nieuwe categorieën)
   const [newMealName, setNewMealName] = useState('')
-  const [newMealCategory, setNewMealCategory] = useState('ontbijt')
+  const [newMealCategory, setNewMealCategory] = useState('Ontbijt')
   const [selectedIngredients, setSelectedIngredients] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [gramsInput, setGramsInput] = useState('100')
 
   const [weekSchedule, setWeekSchedule] = useState({
-    'Maandag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
-    'Dinsdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
-    'Woensdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
-    'Donderdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
-    'Vrijdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
-    'Zaterdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
-    'Zondag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' }
+    'Maandag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '', rpe: '', feedback: '' },
+    'Dinsdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '', rpe: '', feedback: '' },
+    'Woensdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', rpe: '', feedback: '' },
+    'Donderdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '', rpe: '', feedback: '' },
+    'Vrijdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '', rpe: '', feedback: '' },
+    'Zaterdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '', rpe: '', feedback: '' },
+    'Zondag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '', rpe: '', feedback: '' }
   })
 
   const [mealLibrary, setMealLibrary] = useState([])
 
-  // Waterdichte datumberekening per dag van de week
   const getWeekDates = (offset) => {
     const now = new Date()
-    const dayOfWeek = now.getDay() // 0 = Zondag, 1 = Maandag...
+    const dayOfWeek = now.getDay()
     const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
 
     const monday = new Date(now)
@@ -100,8 +98,60 @@ export default function Home() {
 
   const weekDates = getWeekDates(weekOffset)
 
+  // Automatische berekening van Intra-Workout voeding & hydratatie
+  const calculateFuelStrategy = (type, durationStr) => {
+    if (!type || type === 'Nog niet ingepland' || type === 'Rustdag') {
+      return { carbsHour: '0g', hydratatie: 'Geen specifieke intra-workout voeding nodig.', advies: 'Rijst/Eiwitmaaltijd op schema aanhouden.' }
+    }
+
+    // Probeer getal in uren of km te ontleden
+    let durNum = parseFloat(durationStr) || 1.0
+
+    if (type === 'Fietsen' || type === 'Koppeltraining') {
+      if (durNum >= 2.5) {
+        return {
+          carbsHour: '75g - 90g KH / uur',
+          hydratatie: '2x Bidon 750ml Iso-drink + Elektrolyten per 1.5u',
+          advies: '1e uur: Bananen/Rijsttaartjes (vaste voeding). Vanaf 2e uur: 1x 6d Sports Gel om de 35-40 min.',
+          herstel: 'Direct na afloop: 500ml Mager Cecemel / Chocomel (0% vet) + Herstelshake'
+        }
+      } else {
+        return {
+          carbsHour: '45g - 60g KH / uur',
+          hydratatie: '1x Bidon 750ml Iso-drink met elektrolyten',
+          advies: '1x Iso-gel of banaan na 45 minuten.',
+          herstel: '300ml Mager Cecemel of eiwitrijke snack binnen 30 min.'
+        }
+      }
+    } else if (type === 'Lopen') {
+      if (durNum >= 1.5 || durationStr.includes('12') || durationStr.includes('15') || durationStr.includes('20')) {
+        return {
+          carbsHour: '40g - 60g KH / uur',
+          hydratatie: '500ml Water/Iso in softflask of bij posten',
+          advies: '1x Isotonische Gel om de 6 tot 8 km innemen met een slok water.',
+          herstel: 'Herstelshake met snelle koolhydraten direct na de run.'
+        }
+      } else {
+        return {
+          carbsHour: '20g - 30g KH (Optioneel)',
+          hydratatie: '500ml Water met elektrolyten',
+          advies: 'Korte/Middelmatige duurloop: voeding vooraf innemen.',
+          herstel: 'Normale herstelmaaltijd (Kip + Rijst / Kwark).'
+        }
+      }
+    } else if (type === 'Zwemmen') {
+      return {
+        carbsHour: '30g KH vooraf',
+        hydratatie: '1x Bidon Water aan de rand van het zwembad',
+        advies: 'Kleine snelle koolhydraatsnack (banaan/peperkoek) 20 min voor de duik.',
+        herstel: 'Herstelmaaltijd binnen 45 min na de training.'
+      }
+    }
+
+    return { carbsHour: '30g KH / uur', hydratatie: '500ml Water per uur', advies: 'Lichte snack bij lange sessies.' }
+  }
+
   useEffect(() => {
-    // Instellen van de actieve dag op de echte dag van vandaag
     const today = new Date()
     const todayDayName = daysOfWeekMap[today.getDay()]
     setCurrentActiveDay(todayDayName)
@@ -284,6 +334,7 @@ export default function Home() {
   const isCoachOrAdmin = dbRole === 'COACH' || dbRole === 'ADMIN' || (!isLiesbethUser && dbRole !== 'ATHLETE')
 
   const currentInfo = weekSchedule[currentActiveDay] || {}
+  const currentFuel = calculateFuelStrategy(currentInfo.type, currentInfo.duration)
 
   const filteredIngredients = INGREDIENT_DATABASE.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -419,7 +470,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: VANDAAG */}
+        {/* TAB: VANDAAG & AUTOMATISCHE INTRA-WORKOUT STRATEGIE */}
         {activeTab === 'vandaag' && (
           <div>
             <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
@@ -431,9 +482,23 @@ export default function Home() {
 
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>🚴‍♀️ Training voor Liesbeth ({currentActiveDay} {getWeekDates(0)[currentActiveDay]})</h3>
-              <div style={{ fontWeight: '700', fontSize: '0.9rem', marginBottom: '4px', color: currentInfo.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a' }}>{currentInfo.type} {currentInfo.duration && `(${currentInfo.duration})`}</div>
-              <div style={{ fontSize: '0.85rem', color: '#334155', whiteSpace: 'pre-line', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '10px' }}>{currentInfo.target || 'Nog geen trainingsdoelen ingepland.'}</div>
-              {currentInfo.note && <div style={{ fontSize: '0.82rem', color: '#1e293b', background: '#eff6ff', padding: '8px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>💬 <strong>Instructies van Kaat:</strong> "{currentInfo.note}"</div>}
+              <div style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '4px', color: currentInfo.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a' }}>{currentInfo.type} {currentInfo.duration && `(${currentInfo.duration})`}</div>
+              <div style={{ fontSize: '0.85rem', color: '#334155', whiteSpace: 'pre-line', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>{currentInfo.target || 'Nog geen trainingsdoelen ingepland.'}</div>
+              
+              {currentInfo.note && <div style={{ fontSize: '0.82rem', color: '#1e293b', background: '#eff6ff', padding: '8px', borderRadius: '6px', border: '1px solid #bfdbfe', marginBottom: '12px' }}>💬 <strong>Instructies van Kaat:</strong> "{currentInfo.note}"</div>}
+
+              {/* INTRA-WORKOUT VOEDINGS- & HYDRATATIE STRATEGIE */}
+              {currentInfo.type && currentInfo.type !== 'Nog niet ingepland' && currentInfo.type !== 'Rustdag' && (
+                <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '10px', padding: '14px', marginTop: '12px' }}>
+                  <div style={{ fontWeight: '800', color: '#065f46', fontSize: '0.9rem', marginBottom: '6px' }}>🍼 Brandstof- & Hydratatiestrategie tijdens de Training:</div>
+                  <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.82rem', color: '#047857', display: 'grid', gap: '4px' }}>
+                    <li>⚡ <strong>Koolhydraten:</strong> {currentFuel.carbsHour}</li>
+                    <li>💧 <strong>Hydratatie:</strong> {currentFuel.hydratatie}</li>
+                    <li>🍌 <strong>Inname Advies:</strong> {currentFuel.advies}</li>
+                    {currentFuel.herstel && <li>🥛 <strong>Direct Na Training:</strong> {currentFuel.herstel}</li>}
+                  </ul>
+                </div>
+              )}
             </div>
 
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
@@ -456,10 +521,9 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: WEEKPLANNING & JAARAGENDA NAVIGATIE */}
+        {/* TAB: WEEKPLANNING */}
         {activeTab === 'week' && (
           <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
-            
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
               <button onClick={() => setWeekOffset(prev => prev - 1)} style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', fontSize: '0.8rem' }}>← Vorige Week</button>
               <div style={{ textAlign: 'center' }}>
@@ -493,17 +557,31 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: MAALTIJDEN BEHEREN & ALFABETISCHE INGREDIËNTEN ZOEKBANK */}
+        {/* TAB: MAALTIJDEN BEHEREN & UITGEBREIDE CATEGORIEN */}
         {activeTab === 'maaltijden' && (
           <div>
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>🥗 Slim Gerecht Samenstellen</h3>
               
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>NAAM VAN HET GERECHT</label>
-                <input type="text" value={newMealName} onChange={(e) => setNewMealName(e.target.value)} placeholder="bijv. Muscle Meat Kip + Broccoli + Zoete Aardappel" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>NAAM VAN HET GERECHT</label>
+                  <input type="text" value={newMealName} onChange={(e) => setNewMealName(e.target.value)} placeholder="bijv. MM Kip + Broccoli + Zoete Aardappel" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>CATEGORIE</label>
+                  <select value={newMealCategory} onChange={(e) => setNewMealCategory(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff' }}>
+                    <option>Ontbijt</option>
+                    <option>Ochtendsnack</option>
+                    <option>Lunch</option>
+                    <option>Namiddagsnack</option>
+                    <option>Diner</option>
+                    <option>Late Night Snack</option>
+                  </select>
+                </div>
               </div>
 
+              {/* ALFABETISCHE ZOEKBANK */}
               <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '12px', marginBottom: '12px' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '800', color: '#0369a1', marginBottom: '4px' }}>🔍 ZOEK INGREDIËNT (ALFABETISCH):</label>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
@@ -511,7 +589,7 @@ export default function Home() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Typ ingrediënt... (bijv. broccoli, mm, kip, havermout)"
+                    placeholder="Typ ingrediënt... (bijv. mm, broccoli, kip, kwark)"
                     style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                   />
                   <input
@@ -576,7 +654,10 @@ export default function Home() {
                   {mealLibrary.map(m => (
                     <div key={m.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                        <strong>{m.name}</strong>
+                        <div>
+                          <strong style={{ fontSize: '0.9rem' }}>{m.name}</strong>
+                          <span style={{ fontSize: '0.7rem', background: '#dbeafe', color: '#1e40af', padding: '2px 6px', borderRadius: '4px', marginLeft: '8px', fontWeight: '700' }}>{m.category}</span>
+                        </div>
                         <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700' }}>{m.kcal} kcal | {m.carbs}g KH | {m.protein}g Eiwit | {m.fat}g Vet</span>
                       </div>
                       {m.composition && <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b', whiteSpace: 'pre-line' }}>{m.composition}</p>}
