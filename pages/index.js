@@ -40,9 +40,10 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('vandaag')
   const [currentActiveDay, setCurrentActiveDay] = useState('Zondag')
   const [weekOffset, setWeekOffset] = useState(0)
+  const [weekDates, setWeekDates] = useState({})
 
   // Coach waarden
-  const [coachDate, setCoachDate] = useState('2026-09-06')
+  const [coachDate, setCoachDate] = useState('')
   const [coachDay, setCoachDay] = useState('Zondag')
   const [coachTime, setCoachTime] = useState('08:30')
   const [coachType, setCoachType] = useState('Lopen')
@@ -74,11 +75,11 @@ export default function Home() {
 
   const [mealLibrary, setMealLibrary] = useState([])
 
-  // Eenvoudige datumberekening zonder tijdzones
-  const getWeekDates = (offset) => {
+  // Lokale datum-berekening uitsluitend in de browser uitvoeren
+  const computeClientWeekDates = (offset) => {
     const today = new Date()
-    const currentDay = today.getDay() // 0 = Zondag, 1 = Maandag...
-    const distToMonday = currentDay === 0 ? -6 : 1 - currentDay
+    const jsDay = today.getDay() // 0 = Zondag, 1 = Maandag...
+    const distToMonday = jsDay === 0 ? -6 : 1 - jsDay
 
     const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + distToMonday + (offset * 7))
 
@@ -92,7 +93,10 @@ export default function Home() {
     return result
   }
 
-  const weekDates = getWeekDates(weekOffset)
+  // Update de datums wanneer de gebruiker bladerd in de weekplanning
+  useEffect(() => {
+    setWeekDates(computeClientWeekDates(weekOffset))
+  }, [weekOffset])
 
   const calculateFuelStrategy = (type, durationStr) => {
     if (!type || type === 'Nog niet ingepland' || type === 'Rustdag') {
@@ -150,18 +154,20 @@ export default function Home() {
     if (data) setFeedbackList(data)
   }
 
+  // Pure Client-Side initialisatie bij het openen van de app
   useEffect(() => {
-    const today = new Date()
+    const now = new Date()
     const dayNames = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag']
-    const todayName = dayNames[today.getDay()]
+    const todayName = dayNames[now.getDay()]
 
-    const yyyy = today.getFullYear()
-    const mm = String(today.getMonth() + 1).padStart(2, '0')
-    const dd = String(today.getDate()).padStart(2, '0')
+    const yyyy = now.getFullYear()
+    const mm = String(now.getMonth() + 1).padStart(2, '0')
+    const dd = String(now.getDate()).padStart(2, '0')
 
     setCurrentActiveDay(todayName)
     setCoachDay(todayName)
     setCoachDate(`${yyyy}-${mm}-${dd}`)
+    setWeekDates(computeClientWeekDates(0))
 
     fetchAllFeedback()
 
@@ -188,14 +194,13 @@ export default function Home() {
     }
   }
 
-  // Zet gekozen datum om naar de juiste dag van de week
   const handleDateChange = (dateStr) => {
     setCoachDate(dateStr)
     if (!dateStr) return
 
     const parts = dateStr.split('-')
     if (parts.length === 3) {
-      const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]))
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10))
       const dayNames = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag']
       setCoachDay(dayNames[d.getDay()])
     }
@@ -508,12 +513,12 @@ export default function Home() {
             <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#0369a1', marginBottom: '4px' }}>📅 SELECTEER DAG OM TE BEKIJKEN:</label>
               <select value={currentActiveDay} onChange={(e) => setCurrentActiveDay(e.target.value)} style={{ width: '100%', fontSize: '1rem', fontWeight: '800', color: '#2563eb', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                {WEEKDAYS.map(d => <option key={d}>{d} ({weekDates[d]})</option>)}
+                {WEEKDAYS.map(d => <option key={d}>{d} ({weekDates[d] || ''})</option>)}
               </select>
             </div>
 
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>🚴‍♀️ Training voor Liesbeth ({currentActiveDay} {weekDates[currentActiveDay]})</h3>
+              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>🚴‍♀️ Training voor Liesbeth ({currentActiveDay} {weekDates[currentActiveDay] || ''})</h3>
               <div style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '4px', color: currentInfo.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a' }}>{currentInfo.type} {currentInfo.duration && `(${currentInfo.duration})`}</div>
               <div style={{ fontSize: '0.85rem', color: '#334155', whiteSpace: 'pre-line', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>{currentInfo.target || 'Nog geen trainingsdoelen ingepland.'}</div>
               
@@ -558,7 +563,7 @@ export default function Home() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
               <button onClick={() => setWeekOffset(prev => prev - 1)} style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', fontSize: '0.8rem' }}>← Vorige Week</button>
               <div style={{ textAlign: 'center' }}>
-                <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>Week van {weekDates['Maandag']} t/m {weekDates['Zondag']}</strong><br/>
+                <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>Week van {weekDates['Maandag'] || ''} t/m {weekDates['Zondag'] || ''}</strong><br/>
                 <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
                   {weekOffset < 0 ? `📜 Historie (${Math.abs(weekOffset)} week/weken geleden)` : weekOffset === 0 ? '📍 Huidige Trainingsweek' : `🔮 Toekomstige Planning (+${weekOffset} week/weken)`}
                 </span>
@@ -573,7 +578,7 @@ export default function Home() {
                   <div key={day} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '2px solid #e2e8f0', paddingBottom: '6px' }}>
                       <span style={{ fontWeight: '800', fontSize: '0.95rem', color: '#0f172a' }}>{day}</span>
-                      <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#2563eb', background: '#eff6ff', padding: '2px 8px', borderRadius: '6px' }}>{weekDates[day]}</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#2563eb', background: '#eff6ff', padding: '2px 8px', borderRadius: '6px' }}>{weekDates[day] || ''}</span>
                     </div>
                     <div style={{ fontSize: '0.82rem', fontWeight: '700', color: info.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a', marginBottom: '4px' }}>🏋️ {info.type} {info.duration && `(${info.duration})`}</div>
                     <div style={{ fontSize: '0.82rem', color: '#334155', whiteSpace: 'pre-line', marginBottom: '8px' }}>{info.target || 'Geen blokken ingevoerd.'}</div>
