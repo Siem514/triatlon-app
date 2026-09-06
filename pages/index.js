@@ -55,7 +55,7 @@ export default function Home() {
   const [rpeScore, setRpeScore] = useState('5')
   const [coachFeedback, setCoachFeedback] = useState('')
 
-  // Recepten & Ingrediënten state (Nieuwe categorieën)
+  // Recepten & Ingrediënten state
   const [newMealName, setNewMealName] = useState('')
   const [newMealCategory, setNewMealCategory] = useState('Ontbijt')
   const [selectedIngredients, setSelectedIngredients] = useState([])
@@ -65,7 +65,7 @@ export default function Home() {
   const [weekSchedule, setWeekSchedule] = useState({
     'Maandag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '', rpe: '', feedback: '' },
     'Dinsdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '', rpe: '', feedback: '' },
-    'Woensdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', rpe: '', feedback: '' },
+    'Woensdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '', rpe: '', feedback: '' },
     'Donderdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '', rpe: '', feedback: '' },
     'Vrijdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '', rpe: '', feedback: '' },
     'Zaterdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '', rpe: '', feedback: '' },
@@ -96,15 +96,11 @@ export default function Home() {
     return result
   }
 
-  const weekDates = getWeekDates(weekOffset)
-
-  // Automatische berekening van Intra-Workout voeding & hydratatie
   const calculateFuelStrategy = (type, durationStr) => {
     if (!type || type === 'Nog niet ingepland' || type === 'Rustdag') {
       return { carbsHour: '0g', hydratatie: 'Geen specifieke intra-workout voeding nodig.', advies: 'Rijst/Eiwitmaaltijd op schema aanhouden.' }
     }
 
-    // Probeer getal in uren of km te ontleden
     let durNum = parseFloat(durationStr) || 1.0
 
     if (type === 'Fietsen' || type === 'Koppeltraining') {
@@ -154,8 +150,13 @@ export default function Home() {
   useEffect(() => {
     const today = new Date()
     const todayDayName = daysOfWeekMap[today.getDay()]
+    const yyyy = today.getFullYear()
+    const mm = String(today.getMonth() + 1).padStart(2, '0')
+    const dd = String(today.getDate()).padStart(2, '0')
+
     setCurrentActiveDay(todayDayName)
     setCoachDay(todayDayName)
+    setCoachDate(`${yyyy}-${mm}-${dd}`)
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -183,7 +184,8 @@ export default function Home() {
   const handleDateChange = (selectedDate) => {
     setCoachDate(selectedDate)
     if (selectedDate) {
-      const dateObj = new Date(selectedDate)
+      const [year, month, day] = selectedDate.split('-').map(Number)
+      const dateObj = new Date(year, month - 1, day)
       const dayName = daysOfWeekMap[dateObj.getDay()]
       setCoachDay(dayName)
     }
@@ -470,7 +472,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: VANDAAG & AUTOMATISCHE INTRA-WORKOUT STRATEGIE */}
+        {/* TAB: VANDAAG */}
         {activeTab === 'vandaag' && (
           <div>
             <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
@@ -487,7 +489,6 @@ export default function Home() {
               
               {currentInfo.note && <div style={{ fontSize: '0.82rem', color: '#1e293b', background: '#eff6ff', padding: '8px', borderRadius: '6px', border: '1px solid #bfdbfe', marginBottom: '12px' }}>💬 <strong>Instructies van Kaat:</strong> "{currentInfo.note}"</div>}
 
-              {/* INTRA-WORKOUT VOEDINGS- & HYDRATATIE STRATEGIE */}
               {currentInfo.type && currentInfo.type !== 'Nog niet ingepland' && currentInfo.type !== 'Rustdag' && (
                 <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '10px', padding: '14px', marginTop: '12px' }}>
                   <div style={{ fontWeight: '800', color: '#065f46', fontSize: '0.9rem', marginBottom: '6px' }}>🍼 Brandstof- & Hydratatiestrategie tijdens de Training:</div>
@@ -527,7 +528,7 @@ export default function Home() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
               <button onClick={() => setWeekOffset(prev => prev - 1)} style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', fontSize: '0.8rem' }}>← Vorige Week</button>
               <div style={{ textAlign: 'center' }}>
-                <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>Week van {weekDates['Maandag']} t/m {weekDates['Zondag']}</strong><br/>
+                <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>Week van {getWeekDates(weekOffset)['Maandag']} t/m {getWeekDates(weekOffset)['Zondag']}</strong><br/>
                 <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
                   {weekOffset < 0 ? `📜 Historie (${Math.abs(weekOffset)} week/weken geleden)` : weekOffset === 0 ? '📍 Huidige Trainingsweek' : `🔮 Toekomstige Planning (+${weekOffset} week/weken)`}
                 </span>
@@ -542,7 +543,7 @@ export default function Home() {
                   <div key={day} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '2px solid #e2e8f0', paddingBottom: '6px' }}>
                       <span style={{ fontWeight: '800', fontSize: '0.95rem', color: '#0f172a' }}>{day}</span>
-                      <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#2563eb', background: '#eff6ff', padding: '2px 8px', borderRadius: '6px' }}>{weekDates[day]}</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#2563eb', background: '#eff6ff', padding: '2px 8px', borderRadius: '6px' }}>{getWeekDates(weekOffset)[day]}</span>
                     </div>
                     <div style={{ fontSize: '0.82rem', fontWeight: '700', color: info.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a', marginBottom: '4px' }}>🏋️ {info.type} {info.duration && `(${info.duration})`}</div>
                     <div style={{ fontSize: '0.82rem', color: '#334155', whiteSpace: 'pre-line', marginBottom: '8px' }}>{info.target || 'Geen blokken ingevoerd.'}</div>
@@ -557,7 +558,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: MAALTIJDEN BEHEREN & UITGEBREIDE CATEGORIEN */}
+        {/* TAB: MAALTIJDEN BEHEREN */}
         {activeTab === 'maaltijden' && (
           <div>
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
@@ -581,7 +582,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* ALFABETISCHE ZOEKBANK */}
               <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '12px', marginBottom: '12px' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '800', color: '#0369a1', marginBottom: '4px' }}>🔍 ZOEK INGREDIËNT (ALFABETISCH):</label>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
