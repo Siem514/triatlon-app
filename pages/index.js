@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-// Uitgebreide alfabetische ingrediëntenlijst inclusief Muscle Meat (MM) producten
 const INGREDIENT_DATABASE = [
   { name: 'Aardappel (Gekookt)', kcal: 85, carbs: 17, protein: 2, fat: 0.1 },
   { name: 'Avocado', kcal: 160, carbs: 9, protein: 2, fat: 15 },
@@ -42,7 +41,7 @@ export default function Home() {
   const [currentActiveDay, setCurrentActiveDay] = useState('Zondag')
   const [weekOffset, setWeekOffset] = useState(0)
 
-  // Coach velden state - wordt in useEffect direct gevuld met VANDAAG
+  // Coach velden state
   const [coachDate, setCoachDate] = useState('')
   const [coachDay, setCoachDay] = useState('Zondag')
   const [coachTime, setCoachTime] = useState('08:30')
@@ -51,9 +50,10 @@ export default function Home() {
   const [coachRunPace, setCoachRunPace] = useState('')
   const [coachNotes, setCoachNotes] = useState('')
 
-  // Feedback state
+  // Feedback state & overzicht voor Kaat
   const [rpeScore, setRpeScore] = useState('5')
   const [coachFeedback, setCoachFeedback] = useState('')
+  const [feedbackList, setFeedbackList] = useState([])
 
   // Recepten & Ingrediënten state
   const [newMealName, setNewMealName] = useState('')
@@ -74,7 +74,6 @@ export default function Home() {
 
   const [mealLibrary, setMealLibrary] = useState([])
 
-  // Foutloze datumberekening op basis van de lokale browserdatum
   const getWeekDates = (offset) => {
     const now = new Date()
     const currentDay = now.getDay()
@@ -146,6 +145,14 @@ export default function Home() {
     return { carbsHour: '30g KH / uur', hydratatie: '500ml Water per uur', advies: 'Lichte snack bij lange sessies.' }
   }
 
+  // Ophalen van alle ingezonden feedback uit Supabase
+  const fetchAllFeedback = async () => {
+    const { data } = await supabase.from('feedback').select('*').order('created_at', { ascending: false })
+    if (data) {
+      setFeedbackList(data)
+    }
+  }
+
   useEffect(() => {
     const today = new Date()
     const todayDayName = DAYS_MAP[today.getDay()]
@@ -156,6 +163,8 @@ export default function Home() {
     setCurrentActiveDay(todayDayName)
     setCoachDay(todayDayName)
     setCoachDate(`${yyyy}-${mm}-${dd}`)
+
+    fetchAllFeedback()
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -180,7 +189,6 @@ export default function Home() {
     }
   }
 
-  // Foutloze verwerking wanneer Kaat een datum aanklikt
   const handleDateChange = (selectedDateStr) => {
     setCoachDate(selectedDateStr)
     if (selectedDateStr) {
@@ -240,10 +248,6 @@ export default function Home() {
     setProfile(null)
   }
 
-  const triggerPhotoScan = () => {
-    alert('📸 Camera / Recepten-Scanner:\n\nMaak een foto van een recept. Onze AI scant het recept en voegt het direct toe aan de bibliotheek!')
-  }
-
   const saveCoachPlan = () => {
     if (!coachDuration) {
       alert('Vul a.u.b. de duur of omvang van de training in.')
@@ -268,17 +272,23 @@ export default function Home() {
     setCoachNotes('')
   }
 
-  const submitFeedback = () => {
-    setWeekSchedule(prev => ({
-      ...prev,
-      [currentActiveDay]: {
-        ...prev[currentActiveDay],
+  // Live opslaan van Liesbeth's feedback naar Supabase
+  const submitFeedback = async () => {
+    const { error } = await supabase.from('feedback').insert([
+      {
+        day_name: currentActiveDay,
         rpe: rpeScore,
-        feedback: coachFeedback
+        comments: coachFeedback
       }
-    }))
-    alert(`Feedback voor ${currentActiveDay} verstuurd naar Kaat!`)
-    setCoachFeedback('')
+    ])
+
+    if (error) {
+      alert(`Fout bij versturen: ${error.message}`)
+    } else {
+      alert(`Feedback voor ${currentActiveDay} verstuurd en opgeslagen in Supabase!`)
+      setCoachFeedback('')
+      fetchAllFeedback() // Kaat ziet het direct
+    }
   }
 
   const addCustomMeal = () => {
@@ -411,7 +421,7 @@ export default function Home() {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
 
-        {/* TAB 1: COACH MODE */}
+        {/* TAB 1: COACH MODE MET FEEDBACKOVERZICHT VOOR KAAT */}
         {activeTab === 'coach' && isCoachOrAdmin && (
           <div>
             <div style={{ fontWeight: '800', fontSize: '1.1rem', color: '#0f172a', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
@@ -419,6 +429,27 @@ export default function Home() {
               <span style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: '700' }}>Coach Dashboard (Kaat)</span>
             </div>
 
+            {/* INGEZONDEN FEEDBACK OVERZICHT VAN LIESBETH */}
+            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#166534', marginBottom: '12px' }}>📩 Ontvangen Feedback van Liesbeth ({feedbackList.length})</h3>
+              {feedbackList.length === 0 ? (
+                <p style={{ color: '#166534', fontSize: '0.85rem', margin: 0 }}>Nog geen feedback ontvangen van Liesbeth.</p>
+              ) : (
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  {feedbackList.map(item => (
+                    <div key={item.id} style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>{item.day_name}</strong>
+                        <span style={{ fontSize: '0.75rem', background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '6px', fontWeight: '700' }}>RPE: {item.rpe}/10</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#334155' }}>"{item.comments || 'Geen opmerking ingevoerd.'}"</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* TRAINING INPLANNEN */}
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>⚙️ Nieuwe Training Inplannen voor Liesbeth</h3>
               
@@ -547,10 +578,6 @@ export default function Home() {
                     </div>
                     <div style={{ fontSize: '0.82rem', fontWeight: '700', color: info.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a', marginBottom: '4px' }}>🏋️ {info.type} {info.duration && `(${info.duration})`}</div>
                     <div style={{ fontSize: '0.82rem', color: '#334155', whiteSpace: 'pre-line', marginBottom: '8px' }}>{info.target || 'Geen blokken ingevoerd.'}</div>
-                    <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                      • <strong>RPE Feedback:</strong> {info.rpe ? `${info.rpe}/10` : 'Nog niet ingevuld'}<br/>
-                      • <strong>Opmerking:</strong> {info.feedback || '-'}
-                    </div>
                   </div>
                 )
               })}
