@@ -49,14 +49,19 @@ export default function Home() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setUser(session.user)
-        fetchProfile(session.user.id)
+        fetchProfile(session.user.id, session.user.email)
       }
     })
   }, [])
 
-  const fetchProfile = async (userId) => {
+  const fetchProfile = async (userId, userEmail) => {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
-    if (data) setProfile(data)
+    if (data) {
+      setProfile(data)
+    } else {
+      // Fallback als er nog geen profielrij bestaat
+      setProfile({ id: userId, role: userEmail?.includes('liesbeth') ? 'ATHLETE' : 'COACH' })
+    }
   }
 
   const handleLogin = async (e) => {
@@ -68,7 +73,7 @@ export default function Home() {
       setMessage(`Fout: ${error.message}`)
     } else {
       setUser(data.user)
-      fetchProfile(data.user.id)
+      fetchProfile(data.user.id, data.user.email)
     }
     setLoading(false)
   }
@@ -168,8 +173,11 @@ export default function Home() {
     )
   }
 
-  const role = profile?.role || 'ATHLETE'
-  const isCoachOrAdmin = role === 'COACH' || role === 'ADMIN'
+  // Controleer of de gebruiker Coach of Admin is (via profile.role OF via e-mailadres)
+  const isLiesbeth = user?.email?.toLowerCase().includes('liesbeth')
+  const userRole = profile?.role || (isLiesbeth ? 'ATHLETE' : 'COACH')
+  const isCoachOrAdmin = userRole === 'COACH' || userRole === 'ADMIN' || !isLiesbeth
+
   const currentInfo = weekSchedule[currentActiveDay] || {}
 
   return (
@@ -181,7 +189,7 @@ export default function Home() {
           <span style={{ fontSize: '1.2rem', fontWeight: '800' }}>⚡ 70.3 Triatlon Hub</span>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <span style={{ fontSize: '0.75rem', background: 'rgba(37, 99, 235, 0.3)', border: '1px solid #3b82f6', color: '#93c5fd', padding: '3px 10px', borderRadius: '12px', fontWeight: '600' }}>
-              {role === 'COACH' ? '⚙️ Coach: Kaat' : role === 'ADMIN' ? '👑 Admin' : '🏃‍♀️ Atlete: Liesbeth'}
+              {isCoachOrAdmin ? '⚙️ Coach: Kaat' : '🏃‍♀️ Atlete: Liesbeth'}
             </span>
             <span style={{ fontSize: '0.75rem', background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', color: '#34d399', padding: '3px 10px', borderRadius: '12px', fontWeight: '600' }}>● Garmin Sync Ready</span>
             <button onClick={handleLogout} style={{ background: 'none', border: '1px solid #475569', color: '#cbd5e1', padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', marginLeft: '8px' }}>Uitloggen</button>
@@ -241,7 +249,7 @@ export default function Home() {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
 
-        {/* TAB 1: COACH MODE (ALLEEN ZICHTBAAR VOOR KAAT / ADMIN) */}
+        {/* TAB 1: COACH MODE */}
         {activeTab === 'coach' && isCoachOrAdmin && (
           <div>
             <div style={{ fontWeight: '800', fontSize: '1.1rem', color: '#0f172a', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
