@@ -64,16 +64,8 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('')
   const [gramsInput, setGramsInput] = useState('100')
 
-  const [weekSchedule, setWeekSchedule] = useState({
-    'Maandag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '' },
-    'Dinsdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '' },
-    'Woensdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '' },
-    'Donderdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '' },
-    'Vrijdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '' },
-    'Zaterdag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '' },
-    'Zondag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', note: '' }
-  })
-
+  // Vaste opslag per unieke datum (DD/MM/YYYY)
+  const [dbSchedules, setDbSchedules] = useState({})
   const [mealLibrary, setMealLibrary] = useState([])
 
   const computeClientWeekDates = (offset) => {
@@ -91,6 +83,18 @@ export default function Home() {
       result[dayName] = `${dd}/${mm}/${d.getFullYear()}`
     })
     return result
+  }
+
+  // Ophalen van ingeplande trainingen uit Supabase
+  const fetchSchedules = async () => {
+    const { data } = await supabase.from('schedules').select('*')
+    if (data) {
+      const scheduleMap = {}
+      data.forEach(item => {
+        scheduleMap[item.date_str] = item
+      })
+      setDbSchedules(scheduleMap)
+    }
   }
 
   useEffect(() => {
@@ -168,6 +172,7 @@ export default function Home() {
     setCoachDate(`${yyyy}-${mm}-${dd}`)
     setWeekDates(computeClientWeekDates(0))
 
+    fetchSchedules()
     fetchAllFeedback()
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -254,34 +259,48 @@ export default function Home() {
     setProfile(null)
   }
 
-  const saveCoachPlan = () => {
+  // Uniek opslaan per datum (DD/MM/YYYY) in Supabase
+  const saveCoachPlan = async () => {
     if (!coachDuration) {
       alert('Vul a.u.b. de duur van de training in.')
       return
     }
 
-    setWeekSchedule(prev => ({
-      ...prev,
-      [coachDay]: {
-        ...prev[coachDay],
+    if (!coachDate) {
+      alert('Selecteer een geldige datum.')
+      return
+    }
+
+    const parts = coachDate.split('-')
+    const formattedTargetDate = `${parts[2]}/${parts[1]}/${parts[0]}`
+
+    const { error } = await supabase.from('schedules').upsert([
+      {
+        date_str: formattedTargetDate,
+        day_name: coachDay,
         type: coachType,
-        startTime: coachTime,
+        start_time: coachTime,
         duration: coachDuration,
         target: coachRunPace || '-',
         note: coachNotes || ''
       }
-    }))
+    ], { onConflict: 'date_str' })
 
-    alert(`Training opgeslagen voor ${coachDay}!`)
-    setCoachDuration('')
-    setCoachRunPace('')
-    setCoachNotes('')
+    if (error) {
+      alert(`Fout bij opslaan: ${error.message}`)
+    } else {
+      alert(`Training opgeslagen voor ${coachDay} (${formattedTargetDate})!`)
+      setCoachDuration('')
+      setCoachRunPace('')
+      setCoachNotes('')
+      fetchSchedules()
+    }
   }
 
   const submitFeedback = async () => {
     const { error } = await supabase.from('feedback').insert([
       {
-        day_name: currentActiveDay,
+        day_name: `${currentActiveDay} (${todayFormattedDate})`,
         rpe: rpeScore,
         comments: coachFeedback
       }
@@ -350,8 +369,8 @@ export default function Home() {
   const dbRole = profile?.role
   const isCoachOrAdmin = dbRole === 'COACH' || dbRole === 'ADMIN' || (!isLiesbethUser && dbRole !== 'ATHLETE')
 
-  const currentInfo = weekSchedule[currentActiveDay] || {}
-  const currentFuel = calculateFuelStrategy(currentInfo.type, currentInfo.duration)
+  const currentTodaySchedule = dbSchedules[todayFormattedDate] || { type: 'Nog niet ingepland' }
+  const currentFuel = calculateFuelStrategy(currentTodaySchedule.type, currentTodaySchedule.duration)
 
   const filteredIngredients = INGREDIENT_DATABASE.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -501,28 +520,28 @@ export default function Home() {
                 <textarea rows="2" value={coachNotes} onChange={(e) => setCoachNotes(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0', boxSizing: 'border-box' }} placeholder="Optionele opmerkingen over voeding of hartslag..."></textarea>
               </div>
 
-              <button onClick={saveCoachPlan} style={{ width: '100%', background: '#2563eb', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>Opslaan op Liesbeth's Schema</button>
+              <button onClick={saveCoachPlan} style={{ width: '100%', background: '#2563eb', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>Opslaan op Datum in Supabase</button>
             </div>
           </div>
         )}
 
-        {/* TAB: VANDAAG (RECHTSTREEKS VANDAAG) */}
+        {/* TAB: VANDAAG */}
         {activeTab === 'vandaag' && (
           <div>
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>
                 🚴‍♀️ Training voor Liesbeth — {currentActiveDay} ({todayFormattedDate})
               </h3>
-              <div style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '4px', color: currentInfo.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a' }}>
-                {currentInfo.type} {currentInfo.duration && `(${currentInfo.duration})`}
+              <div style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '4px', color: currentTodaySchedule.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a' }}>
+                {currentTodaySchedule.type} {currentTodaySchedule.duration && `(${currentTodaySchedule.duration})`}
               </div>
               <div style={{ fontSize: '0.85rem', color: '#334155', whiteSpace: 'pre-line', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
-                {currentInfo.target || 'Nog geen trainingsdoelen ingepland voor vandaag.'}
+                {currentTodaySchedule.target || 'Nog geen trainingsdoelen ingepland voor vandaag.'}
               </div>
               
-              {currentInfo.note && <div style={{ fontSize: '0.82rem', color: '#1e293b', background: '#eff6ff', padding: '8px', borderRadius: '6px', border: '1px solid #bfdbfe', marginBottom: '12px' }}>💬 <strong>Instructies van Kaat:</strong> "{currentInfo.note}"</div>}
+              {currentTodaySchedule.note && <div style={{ fontSize: '0.82rem', color: '#1e293b', background: '#eff6ff', padding: '8px', borderRadius: '6px', border: '1px solid #bfdbfe', marginBottom: '12px' }}>💬 <strong>Instructies van Kaat:</strong> "{currentTodaySchedule.note}"</div>}
 
-              {currentInfo.type && currentInfo.type !== 'Nog niet ingepland' && currentInfo.type !== 'Rustdag' && (
+              {currentTodaySchedule.type && currentTodaySchedule.type !== 'Nog niet ingepland' && currentTodaySchedule.type !== 'Rustdag' && (
                 <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '10px', padding: '14px', marginTop: '12px' }}>
                   <div style={{ fontWeight: '800', color: '#065f46', fontSize: '0.9rem', marginBottom: '6px' }}>🍼 Brandstof- & Hydratatiestrategie tijdens de Training:</div>
                   <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.82rem', color: '#047857', display: 'grid', gap: '4px' }}>
@@ -555,7 +574,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: WEEKPLANNING */}
+        {/* TAB: WEEKPLANNING MET UNIEKE DATUM OPSLAG */}
         {activeTab === 'week' && (
           <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
@@ -571,14 +590,15 @@ export default function Home() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px' }}>
               {WEEKDAYS.map(day => {
-                const info = weekSchedule[day] || {}
+                const dateStr = weekDates[day] || ''
+                const info = dbSchedules[dateStr] || { type: 'Nog niet ingepland' }
                 const fuel = calculateFuelStrategy(info.type, info.duration)
 
                 return (
                   <div key={day} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '2px solid #e2e8f0', paddingBottom: '6px' }}>
                       <span style={{ fontWeight: '800', fontSize: '0.95rem', color: '#0f172a' }}>{day}</span>
-                      <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#2563eb', background: '#eff6ff', padding: '2px 8px', borderRadius: '6px' }}>{weekDates[day] || ''}</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#2563eb', background: '#eff6ff', padding: '2px 8px', borderRadius: '6px' }}>{dateStr}</span>
                     </div>
                     <div style={{ fontSize: '0.82rem', fontWeight: '700', color: info.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a', marginBottom: '4px' }}>🏋️ {info.type} {info.duration && `(${info.duration})`}</div>
                     <div style={{ fontSize: '0.82rem', color: '#334155', whiteSpace: 'pre-line', marginBottom: '8px' }}>{info.target || 'Geen blokken ingevoerd.'}</div>
