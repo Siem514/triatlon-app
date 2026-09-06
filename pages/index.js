@@ -1,6 +1,22 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+// Ingebouwde database met voedingswaarden per 100 gram
+const INGREDIENT_DATABASE = {
+  'kipfilet': { kcal: 110, carbs: 0, protein: 23, fat: 1.5 },
+  'mager rundergehakt': { kcal: 158, carbs: 0, protein: 20, fat: 8.5 },
+  'zoete aardappel': { kcal: 86, carbs: 20, protein: 1.6, fat: 0.1 },
+  'zilvervliesrijst': { kcal: 111, carbs: 23, protein: 2.6, fat: 0.9 },
+  'havermout': { kcal: 389, carbs: 66, protein: 17, fat: 7 },
+  'banaan': { kcal: 89, carbs: 23, protein: 1.1, fat: 0.3 },
+  'kwark': { kcal: 52, carbs: 4, protein: 8.5, fat: 0.2 },
+  'olijfolie': { kcal: 884, carbs: 0, protein: 0, fat: 100 },
+  'pindakaas': { kcal: 588, carbs: 20, protein: 25, fat: 50 },
+  'volkoren brood': { kcal: 247, carbs: 41, protein: 9, fat: 2 },
+  'ei': { kcal: 155, carbs: 1.1, protein: 13, fat: 11 },
+  'pasta': { kcal: 131, carbs: 25, protein: 5, fat: 1.1 }
+}
+
 export default function Home() {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -25,13 +41,13 @@ export default function Home() {
   const [rpeScore, setRpeScore] = useState('5')
   const [coachFeedback, setCoachFeedback] = useState('')
 
-  // Nieuwe Maaltijd state
+  // Slimme Maaltijd Invoer state
   const [newMealName, setNewMealName] = useState('')
   const [newMealCategory, setNewMealCategory] = useState('ontbijt')
-  const [newMealKcal, setNewMealKcal] = useState('')
-  const [newMealCarbs, setNewMealCarbs] = useState('')
-  const [newMealProtein, setNewMealProtein] = useState('')
-  const [newMealFat, setNewMealFat] = useState('')
+  const [ingredientsInput, setIngredientsInput] = useState('')
+  const [calculatedMacros, setCalculatedMacros] = useState({ kcal: 0, carbs: 0, protein: 0, fat: 0 })
+
+  const daysOfWeekList = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag']
 
   const [weekSchedule, setWeekSchedule] = useState({
     'Maandag': { type: 'Nog niet ingepland', startTime: '', duration: '', target: '', carbs: '', note: '', ontbijt: 'Nog niet gekozen', lunch: 'Nog niet gekozen', diner: 'Nog niet gekozen', snack: 'Nog niet gekozen', rpe: '', feedback: '' },
@@ -60,7 +76,6 @@ export default function Home() {
       if (data && data.role) {
         setProfile(data)
       } else {
-        // Fallback: Liesbeth is Atlete, alle andere e-mailadressen zijn Coach/Admin
         const isLiesbeth = userEmail?.toLowerCase().includes('liesbeth')
         setProfile({ id: userId, role: isLiesbeth ? 'ATHLETE' : 'COACH' })
       }
@@ -68,6 +83,48 @@ export default function Home() {
       const isLiesbeth = userEmail?.toLowerCase().includes('liesbeth')
       setProfile({ id: userId, role: isLiesbeth ? 'ATHLETE' : 'COACH' })
     }
+  }
+
+  // Automatisch de dag van de week instellen op basis van de gekozen datum
+  const handleDateChange = (selectedDate) => {
+    setCoachDate(selectedDate)
+    if (selectedDate) {
+      const dateObj = new Date(selectedDate)
+      const dayName = daysOfWeekList[dateObj.getDay()]
+      setCoachDay(dayName)
+    }
+  }
+
+  // Automatische Macro-berekening op basis van de ingrediënten
+  const handleIngredientsChange = (text) => {
+    setIngredientsInput(text)
+    let totalKcal = 0, totalCarbs = 0, totalProtein = 0, totalFat = 0
+
+    // Ontleed de tekst regel voor regel (bijv. "150g kipfilet")
+    const lines = text.toLowerCase().split('\n')
+    lines.forEach(line => {
+      Object.keys(INGREDIENT_DATABASE).forEach(item => {
+        if (line.includes(item)) {
+          // Zoek naar getallen in de regel (bijv. 150 of 150g)
+          const match = line.match(/\d+/)
+          const grams = match ? parseInt(match[0], 10) : 100
+          const factor = grams / 100
+
+          const data = INGREDIENT_DATABASE[item]
+          totalKcal += data.kcal * factor
+          totalCarbs += data.carbs * factor
+          totalProtein += data.protein * factor
+          totalFat += data.fat * factor
+        }
+      })
+    })
+
+    setCalculatedMacros({
+      kcal: Math.round(totalKcal),
+      carbs: Math.round(totalCarbs),
+      protein: Math.round(totalProtein),
+      fat: Math.round(totalFat)
+    })
   }
 
   const handleLogin = async (e) => {
@@ -137,18 +194,17 @@ export default function Home() {
       id: Date.now(),
       name: newMealName,
       category: newMealCategory,
-      kcal: parseInt(newMealKcal) || 0,
-      carbs: parseInt(newMealCarbs) || 0,
-      protein: parseInt(newMealProtein) || 0,
-      fat: parseInt(newMealFat) || 0
+      composition: ingredientsInput,
+      kcal: calculatedMacros.kcal,
+      carbs: calculatedMacros.carbs,
+      protein: calculatedMacros.protein,
+      fat: calculatedMacros.fat
     }
     setMealLibrary(prev => [...prev, newMeal])
     setNewMealName('')
-    setNewMealKcal('')
-    setNewMealCarbs('')
-    setNewMealProtein('')
-    setNewMealFat('')
-    alert('Gerecht toegevoegd aan de maaltijdenbibliotheek!')
+    setIngredientsInput('')
+    setCalculatedMacros({ kcal: 0, carbs: 0, protein: 0, fat: 0 })
+    alert('Gerecht met berekende macro\'s toegevoegd aan de bibliotheek!')
   }
 
   if (!user) {
@@ -179,11 +235,8 @@ export default function Home() {
     )
   }
 
-  // Waterdichte rolbepaling:
   const userEmail = user?.email?.toLowerCase() || ''
   const isLiesbethUser = userEmail.includes('liesbeth')
-  
-  // Als de database 'COACH' of 'ADMIN' aangeeft OR het e-mailadres is niet van Liesbeth -> Coach toelaten
   const dbRole = profile?.role
   const isCoachOrAdmin = dbRole === 'COACH' || dbRole === 'ADMIN' || (!isLiesbethUser && dbRole !== 'ATHLETE')
 
@@ -271,12 +324,12 @@ export default function Home() {
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', background: '#eff6ff', padding: '12px', borderRadius: '8px', border: '1px solid #bfdbfe', marginBottom: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>📅 PLANNINSDATUM</label>
-                  <input type="date" value={coachDate} onChange={(e) => setCoachDate(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0', boxSizing: 'border-box' }} />
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>📅 SELECTEER DATUM</label>
+                  <input type="date" value={coachDate} onChange={(e) => handleDateChange(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0', boxSizing: 'border-box' }} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>DAG VAN DE WEEK</label>
-                  <select value={coachDay} onChange={(e) => setCoachDay(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>DAG VAN DE WEEK (AUTOMATISCH)</label>
+                  <select value={coachDay} onChange={(e) => setCoachDay(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#fff', fontWeight: '700', color: '#2563eb' }}>
                     {['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'].map(d => <option key={d}>{d}</option>)}
                   </select>
                 </div>
@@ -379,7 +432,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: MAALTIJDEN BEHEREN */}
+        {/* TAB: MAALTIJDEN BEHEREN & SLIMME MACRO BEREKENING */}
         {activeTab === 'maaltijden' && (
           <div>
             <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
@@ -389,30 +442,43 @@ export default function Home() {
             </div>
 
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>➕ Handmatig Nieuw Gerecht Toevoegen</h3>
+              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>🥗 Slim Gerecht Samenstellen & Macro's Berekenen</h3>
+              
               <div style={{ marginBottom: '10px' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>NAAM VAN HET GERECHT</label>
-                <input type="text" value={newMealName} onChange={(e) => setNewMealName(e.target.value)} placeholder="bijv. Havermout met Banaan" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+                <input type="text" value={newMealName} onChange={(e) => setNewMealName(e.target.value)} placeholder="bijv. Muscle Meat Kip + Zoete Aardappel" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '12px' }}>
-                <div><label style={{ display: 'block', fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>KCAL</label><input type="number" value={newMealKcal} onChange={(e) => setNewMealKcal(e.target.value)} style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} /></div>
-                <div><label style={{ display: 'block', fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>KH (G)</label><input type="number" value={newMealCarbs} onChange={(e) => setNewMealCarbs(e.target.value)} style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} /></div>
-                <div><label style={{ display: 'block', fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>EIWIT (G)</label><input type="number" value={newMealProtein} onChange={(e) => setNewMealProtein(e.target.value)} style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} /></div>
-                <div><label style={{ display: 'block', fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>VET (G)</label><input type="number" value={newMealFat} onChange={(e) => setNewMealFat(e.target.value)} style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} /></div>
+
+              <div style={{ marginBottom: '10px' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>INGREDIËNTEN & GEWICHTEN (Onder elkaar invoeren)</label>
+                <textarea rows="4" value={ingredientsInput} onChange={(e) => handleIngredientsChange(e.target.value)} placeholder="bijv.&#10;150g kipfilet&#10;200g zoete aardappel&#10;10g olijfolie" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}></textarea>
+                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Herkenbare ingrediënten: kipfilet, mager rundergehakt, zoete aardappel, zilvervliesrijst, havermout, banaan, kwark, olijfolie, pindakaas, volkoren brood, ei, pasta.</span>
               </div>
-              <button onClick={addCustomMeal} style={{ width: '100%', background: '#2563eb', color: 'white', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>Toevoegen aan Bibliotheek</button>
+
+              {/* Automatisch berekende macro's weergave */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', marginBottom: '12px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', textAlign: 'center' }}>
+                <div><div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700' }}>KCAL</div><strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{calculatedMacros.kcal}</strong></div>
+                <div><div style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: '700' }}>KH (G)</div><strong style={{ fontSize: '1.1rem', color: '#2563eb' }}>{calculatedMacros.carbs}g</strong></div>
+                <div><div style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: '700' }}>EIWIT (G)</div><strong style={{ fontSize: '1.1rem', color: '#16a34a' }}>{calculatedMacros.protein}g</strong></div>
+                <div><div style={{ fontSize: '0.7rem', color: '#d97706', fontWeight: '700' }}>VET (G)</div><strong style={{ fontSize: '1.1rem', color: '#d97706' }}>{calculatedMacros.fat}g</strong></div>
+              </div>
+
+              <button onClick={addCustomMeal} style={{ width: '100%', background: '#2563eb', color: 'white', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>Opslaan in Bibliotheek</button>
             </div>
 
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>📖 Gerechten Bibliotheek ({mealLibrary.length})</h3>
               {mealLibrary.length === 0 ? (
-                <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Nog geen gerechten toegevoegd. Maak een foto of voeg er handmatig een toe.</p>
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Nog geen gerechten toegevoegd. Stel hierboven een maaltijd samen met ingrediënten.</p>
               ) : (
                 <div style={{ display: 'grid', gap: '8px' }}>
                   {mealLibrary.map(m => (
-                    <div key={m.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong>{m.name}</strong>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{m.kcal} kcal | {m.carbs}g KH | {m.protein}g Eiwit</span>
+                    <div key={m.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <strong>{m.name}</strong>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700' }}>{m.kcal} kcal | {m.carbs}g KH | {m.protein}g Eiwit | {m.fat}g Vet</span>
+                      </div>
+                      {m.composition && <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b', whiteSpace: 'pre-line' }}>{m.composition}</p>}
                     </div>
                   ))}
                 </div>
