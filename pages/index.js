@@ -1,20 +1,25 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-const INGREDIENT_DATABASE = {
-  'kipfilet': { kcal: 110, carbs: 0, protein: 23, fat: 1.5 },
-  'mager rundergehakt': { kcal: 158, carbs: 0, protein: 20, fat: 8.5 },
-  'zoete aardappel': { kcal: 86, carbs: 20, protein: 1.6, fat: 0.1 },
-  'zilvervliesrijst': { kcal: 111, carbs: 23, protein: 2.6, fat: 0.9 },
-  'havermout': { kcal: 389, carbs: 66, protein: 17, fat: 7 },
-  'banaan': { kcal: 89, carbs: 23, protein: 1.1, fat: 0.3 },
-  'kwark': { kcal: 52, carbs: 4, protein: 8.5, fat: 0.2 },
-  'olijfolie': { kcal: 884, carbs: 0, protein: 0, fat: 100 },
-  'pindakaas': { kcal: 588, carbs: 20, protein: 25, fat: 50 },
-  'volkoren brood': { kcal: 247, carbs: 41, protein: 9, fat: 2 },
-  'ei': { kcal: 155, carbs: 1.1, protein: 13, fat: 11 },
-  'pasta': { kcal: 131, carbs: 25, protein: 5, fat: 1.1 }
-}
+// Uitgebreide voedingswaardebank per 100 gram
+const INGREDIENT_DATABASE = [
+  { keywords: ['kipfilet', 'kip'], kcal: 110, carbs: 0, protein: 23, fat: 1.5 },
+  { keywords: ['rundergehakt', 'gehakt', 'mager gehakt'], kcal: 158, carbs: 0, protein: 20, fat: 8.5 },
+  { keywords: ['zoete aardappel', 'aardappel'], kcal: 86, carbs: 20, protein: 1.6, fat: 0.1 },
+  { keywords: ['zilvervliesrijst', 'rijst'], kcal: 111, carbs: 23, protein: 2.6, fat: 0.9 },
+  { keywords: ['havermout', 'haver'], kcal: 389, carbs: 66, protein: 17, fat: 7 },
+  { keywords: ['banaan'], kcal: 89, carbs: 23, protein: 1.1, fat: 0.3 },
+  { keywords: ['kwark', 'franse kwark'], kcal: 52, carbs: 4, protein: 8.5, fat: 0.2 },
+  { keywords: ['olijfolie', 'olie'], kcal: 884, carbs: 0, protein: 0, fat: 100 },
+  { keywords: ['pindakaas'], kcal: 588, carbs: 20, protein: 25, fat: 50 },
+  { keywords: ['volkoren brood', 'brood', 'toast'], kcal: 247, carbs: 41, protein: 9, fat: 2 },
+  { keywords: ['ei', 'eieren'], kcal: 155, carbs: 1.1, protein: 13, fat: 11 },
+  { keywords: ['pasta', 'spaghetti', 'macaroni'], kcal: 131, carbs: 25, protein: 5, fat: 1.1 },
+  { keywords: ['chocomel', 'cecemel'], kcal: 60, carbs: 10, protein: 3.5, fat: 0.2 },
+  { keywords: ['tonijn'], kcal: 113, carbs: 0, protein: 26, fat: 0.9 },
+  { keywords: ['zalm'], kcal: 208, carbs: 0, protein: 20, fat: 13 },
+  { keywords: ['avocado'], kcal: 160, carbs: 9, protein: 2, fat: 15 }
+]
 
 export default function Home() {
   const [user, setUser] = useState(null)
@@ -27,7 +32,6 @@ export default function Home() {
   const daysOfWeekList = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag']
 
   const [activeTab, setActiveTab] = useState('vandaag')
-  // Bepaal dynamisch de dag van vandaag (bijv. Zondag op 6 september)
   const [currentActiveDay, setCurrentActiveDay] = useState('Zondag')
 
   // Coach velden state
@@ -62,7 +66,6 @@ export default function Home() {
   const [mealLibrary, setMealLibrary] = useState([])
 
   useEffect(() => {
-    // Automatisch de exacte dag van vandaag instellen op basis van de systeemdatum
     const today = new Date()
     const todayName = daysOfWeekList[today.getDay()]
     setCurrentActiveDay(todayName)
@@ -100,23 +103,28 @@ export default function Home() {
     }
   }
 
+  // Verbeterde, flexibele Macro-calculator
   const handleIngredientsChange = (text) => {
     setIngredientsInput(text)
     let totalKcal = 0, totalCarbs = 0, totalProtein = 0, totalFat = 0
 
     const lines = text.toLowerCase().split('\n')
     lines.forEach(line => {
-      Object.keys(INGREDIENT_DATABASE).forEach(item => {
-        if (line.includes(item)) {
-          const match = line.match(/\d+/)
-          const grams = match ? parseInt(match[0], 10) : 100
-          const factor = grams / 100
+      if (!line.trim()) return
 
-          const data = INGREDIENT_DATABASE[item]
-          totalKcal += data.kcal * factor
-          totalCarbs += data.carbs * factor
-          totalProtein += data.protein * factor
-          totalFat += data.fat * factor
+      // Zoek getallen in de regel (bijv. "150g" of "150 gram" of "150")
+      const matchNumber = line.match(/\d+/)
+      const grams = matchNumber ? parseInt(matchNumber[0], 10) : 100
+      const factor = grams / 100
+
+      // Zoek welk ingrediënt voorkomt in deze regel
+      INGREDIENT_DATABASE.forEach(item => {
+        const found = item.keywords.some(keyword => line.includes(keyword))
+        if (found) {
+          totalKcal += item.kcal * factor
+          totalCarbs += item.carbs * factor
+          totalProtein += item.protein * factor
+          totalFat += item.fat * factor
         }
       })
     })
@@ -454,10 +462,10 @@ export default function Home() {
               <div style={{ marginBottom: '10px' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>INGREDIËNTEN & GEWICHTEN (Onder elkaar invoeren)</label>
                 <textarea rows="4" value={ingredientsInput} onChange={(e) => handleIngredientsChange(e.target.value)} placeholder="bijv.&#10;150g kipfilet&#10;200g zoete aardappel&#10;10g olijfolie" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}></textarea>
-                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Herkenbare ingrediënten: kipfilet, mager rundergehakt, zoete aardappel, zilvervliesrijst, havermout, banaan, kwark, olijfolie, pindakaas, volkoren brood, ei, pasta.</span>
+                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Ondersteund: kipfilet, gehakt, zoete aardappel, rijst, havermout, banaan, kwark, olijfolie, pindakaas, brood, ei, pasta, chocomel, tonijn, zalm, avocado.</span>
               </div>
 
-              {/* Automatisch berekende macro's weergave */}
+              {/* Live Berekende Macro's */}
               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', marginBottom: '12px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', textAlign: 'center' }}>
                 <div><div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700' }}>KCAL</div><strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{calculatedMacros.kcal}</strong></div>
                 <div><div style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: '700' }}>KH (G)</div><strong style={{ fontSize: '1.1rem', color: '#2563eb' }}>{calculatedMacros.carbs}g</strong></div>
