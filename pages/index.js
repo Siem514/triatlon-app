@@ -75,10 +75,9 @@ export default function Home() {
 
   const [mealLibrary, setMealLibrary] = useState([])
 
-  // Lokale datum-berekening uitsluitend in de browser uitvoeren
   const computeClientWeekDates = (offset) => {
     const today = new Date()
-    const jsDay = today.getDay() // 0 = Zondag, 1 = Maandag...
+    const jsDay = today.getDay()
     const distToMonday = jsDay === 0 ? -6 : 1 - jsDay
 
     const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + distToMonday + (offset * 7))
@@ -93,7 +92,6 @@ export default function Home() {
     return result
   }
 
-  // Update de datums wanneer de gebruiker bladerd in de weekplanning
   useEffect(() => {
     setWeekDates(computeClientWeekDates(weekOffset))
   }, [weekOffset])
@@ -154,7 +152,6 @@ export default function Home() {
     if (data) setFeedbackList(data)
   }
 
-  // Pure Client-Side initialisatie bij het openen van de app
   useEffect(() => {
     const now = new Date()
     const dayNames = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag']
@@ -557,7 +554,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: WEEKPLANNING */}
+        {/* TAB: WEEKPLANNING MET DIRECT ZICHTBAAR INTRA-WORKOUT ADVIES */}
         {activeTab === 'week' && (
           <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
@@ -574,6 +571,8 @@ export default function Home() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px' }}>
               {WEEKDAYS.map(day => {
                 const info = weekSchedule[day] || {}
+                const fuel = calculateFuelStrategy(info.type, info.duration)
+
                 return (
                   <div key={day} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '2px solid #e2e8f0', paddingBottom: '6px' }}>
@@ -582,6 +581,15 @@ export default function Home() {
                     </div>
                     <div style={{ fontSize: '0.82rem', fontWeight: '700', color: info.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a', marginBottom: '4px' }}>🏋️ {info.type} {info.duration && `(${info.duration})`}</div>
                     <div style={{ fontSize: '0.82rem', color: '#334155', whiteSpace: 'pre-line', marginBottom: '8px' }}>{info.target || 'Geen blokken ingevoerd.'}</div>
+
+                    {/* WEERGEVEN VAN VOEDINGSADVIES IN DE WEEKPLANNING */}
+                    {info.type && info.type !== 'Nog niet ingepland' && info.type !== 'Rustdag' && (
+                      <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '8px', marginTop: '6px', fontSize: '0.78rem', color: '#047857' }}>
+                        <strong>🍼 Intra-Workout Voeding:</strong><br/>
+                        • {fuel.carbsHour}<br/>
+                        • {fuel.advies}
+                      </div>
+                    )}
                   </div>
                 )
               })}
