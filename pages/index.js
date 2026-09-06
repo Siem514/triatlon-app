@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-// Uitgebreide voedingswaardebank per 100 gram
 const INGREDIENT_DATABASE = [
   { keywords: ['kipfilet', 'kip'], kcal: 110, carbs: 0, protein: 23, fat: 1.5 },
   { keywords: ['rundergehakt', 'gehakt', 'mager gehakt'], kcal: 158, carbs: 0, protein: 20, fat: 8.5 },
@@ -65,6 +64,31 @@ export default function Home() {
 
   const [mealLibrary, setMealLibrary] = useState([])
 
+  // Functie om de datums van de huidige week te berekenen
+  const getWeekDates = () => {
+    const now = new Date()
+    const currentDay = now.getDay() // 0 = Zondag, 1 = Maandag...
+    const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay
+
+    const monday = new Date(now)
+    monday.setDate(now.getDate() + distanceToMonday)
+
+    const weekDays = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag']
+    const result = {}
+
+    weekDays.forEach((day, index) => {
+      const d = new Date(monday)
+      d.setDate(monday.getDate() + index)
+      const dayStr = String(d.getDate()).padStart(2, '0')
+      const monthStr = String(d.getMonth() + 1).padStart(2, '0')
+      result[day] = `${dayStr}/${monthStr}/${d.getFullYear()}`
+    })
+
+    return result
+  }
+
+  const weekDates = getWeekDates()
+
   useEffect(() => {
     const today = new Date()
     const todayName = daysOfWeekList[today.getDay()]
@@ -103,7 +127,6 @@ export default function Home() {
     }
   }
 
-  // Verbeterde, flexibele Macro-calculator
   const handleIngredientsChange = (text) => {
     setIngredientsInput(text)
     let totalKcal = 0, totalCarbs = 0, totalProtein = 0, totalFat = 0
@@ -112,12 +135,10 @@ export default function Home() {
     lines.forEach(line => {
       if (!line.trim()) return
 
-      // Zoek getallen in de regel (bijv. "150g" of "150 gram" of "150")
       const matchNumber = line.match(/\d+/)
       const grams = matchNumber ? parseInt(matchNumber[0], 10) : 100
       const factor = grams / 100
 
-      // Zoek welk ingrediënt voorkomt in deze regel
       INGREDIENT_DATABASE.forEach(item => {
         const found = item.keywords.some(keyword => line.includes(keyword))
         if (found) {
@@ -388,12 +409,12 @@ export default function Home() {
             <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#0369a1', marginBottom: '4px' }}>📅 SELECTEER DAG OM TE BEKIJKEN:</label>
               <select value={currentActiveDay} onChange={(e) => setCurrentActiveDay(e.target.value)} style={{ width: '100%', fontSize: '1rem', fontWeight: '800', color: '#2563eb', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                {['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'].map(d => <option key={d}>{d}</option>)}
+                {['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'].map(d => <option key={d}>{d} ({weekDates[d]})</option>)}
               </select>
             </div>
 
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>🚴‍♀️ Training voor Liesbeth ({currentActiveDay})</h3>
+              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>🚴‍♀️ Training voor Liesbeth ({currentActiveDay} {weekDates[currentActiveDay]})</h3>
               <div style={{ fontWeight: '700', fontSize: '0.9rem', marginBottom: '4px', color: currentInfo.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a' }}>{currentInfo.type} {currentInfo.duration && `(${currentInfo.duration})`}</div>
               <div style={{ fontSize: '0.85rem', color: '#334155', whiteSpace: 'pre-line', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '10px' }}>{currentInfo.target || 'Nog geen trainingsdoelen ingepland.'}</div>
               {currentInfo.note && <div style={{ fontSize: '0.82rem', color: '#1e293b', background: '#eff6ff', padding: '8px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>💬 <strong>Instructies van Kaat:</strong> "{currentInfo.note}"</div>}
@@ -419,17 +440,20 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: WEEKPLANNING */}
+        {/* TAB: WEEKPLANNING MET METEEN DE EXACTE DATUMS */}
         {activeTab === 'week' && (
           <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>📅 Weekplanning van Liesbeth</h3>
+            <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>📅 Weekplanning van Liesbeth (Week van {weekDates['Maandag']} t/m {weekDates['Zondag']})</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px' }}>
               {['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'].map(day => {
                 const info = weekSchedule[day] || {}
                 return (
                   <div key={day} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
-                    <div style={{ fontWeight: '700', fontSize: '0.95rem', color: '#0f172a', marginBottom: '8px', borderBottom: '2px solid #e2e8f0', paddingBottom: '6px' }}>{day}</div>
-                    <div style={{ fontSize: '0.82rem', fontWeight: '700', color: info.type === 'Nog niet ingepland' ? '#94a3b8' : '#2563eb', marginBottom: '4px' }}>🏋️ {info.type} {info.duration && `(${info.duration})`}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '2px solid #e2e8f0', paddingBottom: '6px' }}>
+                      <span style={{ fontWeight: '800', fontSize: '0.95rem', color: '#0f172a' }}>{day}</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#2563eb', background: '#eff6ff', padding: '2px 8px', borderRadius: '6px' }}>{weekDates[day]}</span>
+                    </div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: '700', color: info.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a', marginBottom: '4px' }}>🏋️ {info.type} {info.duration && `(${info.duration})`}</div>
                     <div style={{ fontSize: '0.82rem', color: '#334155', whiteSpace: 'pre-line', marginBottom: '8px' }}>{info.target || 'Geen blokken ingevoerd.'}</div>
                     <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
                       • <strong>RPE Feedback:</strong> {info.rpe ? `${info.rpe}/10` : 'Nog niet ingevuld'}<br/>
@@ -465,7 +489,6 @@ export default function Home() {
                 <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Ondersteund: kipfilet, gehakt, zoete aardappel, rijst, havermout, banaan, kwark, olijfolie, pindakaas, brood, ei, pasta, chocomel, tonijn, zalm, avocado.</span>
               </div>
 
-              {/* Live Berekende Macro's */}
               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', marginBottom: '12px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', textAlign: 'center' }}>
                 <div><div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700' }}>KCAL</div><strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{calculatedMacros.kcal}</strong></div>
                 <div><div style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: '700' }}>KH (G)</div><strong style={{ fontSize: '1.1rem', color: '#2563eb' }}>{calculatedMacros.carbs}g</strong></div>
