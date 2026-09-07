@@ -52,10 +52,14 @@ export default function Home() {
   const [coachRunPace, setCoachRunPace] = useState('')
   const [coachNotes, setCoachNotes] = useState('')
 
-  // Feedback waarden
+  // Feedback & Meldingen
   const [rpeScore, setRpeScore] = useState('5')
   const [coachFeedback, setCoachFeedback] = useState('')
   const [feedbackList, setFeedbackList] = useState([])
+  const [unreadFeedbackCount, setUnreadFeedbackCount] = useState(0)
+
+  // Detailvenster Pop-up State
+  const [selectedDayDetail, setSelectedDayDetail] = useState(null)
 
   // Gezondheidsmetingen
   const [weightInput, setWeightInput] = useState('')
@@ -106,7 +110,6 @@ export default function Home() {
     setWeekDates(computeClientWeekDates(weekOffset))
   }, [weekOffset])
 
-  // DYNAMISCHE BEREKENING VAN VOLUMES EN SPORTTAK-VERDELING
   const calculateWeeklyVolume = () => {
     let runHours = 0
     let bikeHours = 0
@@ -122,11 +125,11 @@ export default function Home() {
         const isKm = schedule.duration.toLowerCase().includes('km')
 
         if (schedule.type === 'Lopen') {
-          runHours += isKm ? num / 10 : num // Ongeveer 10 km/u als omrekening
+          runHours += isKm ? num / 10 : num
         } else if (schedule.type === 'Fietsen' || schedule.type === 'Koppeltraining') {
-          bikeHours += isKm ? num / 28 : num // Ongeveer 28 km/u
+          bikeHours += isKm ? num / 28 : num
         } else if (schedule.type === 'Zwemmen') {
-          swimHours += isKm ? num / 2.5 : num // Ongeveer 2.5 km/u
+          swimHours += isKm ? num / 2.5 : num
         } else {
           otherHours += num
         }
@@ -166,11 +169,11 @@ export default function Home() {
         const hours = isKm ? numVal / 28 : numVal
         const gelsNeeded = Math.ceil(hours * 2)
         return {
-          preWorkout: '2 tot 3u vooraf: Grote koolhydraatrijke maaltijd (bijv. 100g Havermout met banaan of MM Basmati rijst). 30 min vooraf: 1x Isotonische Gel of peperkoek.',
+          preWorkout: '2 tot 3u vooraf: Grote koolhydraatrijke maaltijd (bijv. Havermout of MM Basmati rijst). 30 min vooraf: 1x Gel.',
           carbsHour: '75g - 90g KH / uur',
           hydratatie: '2x Bidon 750ml Iso-drink + Elektrolyten per 1.5u',
-          advies: '1e uur: Bananen/Rijsttaartjes (vaste voeding). Vanaf 2e uur: 1x Gel om de 30-35 min.',
-          herstel: 'Direct na afloop: 500ml Mager Cecemel / Chocomel (0% vet) + Herstelshake (4:1 KH/Eiwit ratio).',
+          advies: '1e uur: Bananen/Rijsttaartjes. Vanaf 2e uur: 1x Gel om de 30-35 min.',
+          herstel: 'Direct na afloop: 500ml Mager Cecemel + Herstelshake.',
           gels: gelsNeeded,
           isoServings: Math.ceil(hours * 1.5),
           cecemelLiters: 0.5
@@ -178,7 +181,7 @@ export default function Home() {
       } else {
         const hours = isKm ? numVal / 28 : numVal
         return {
-          preWorkout: '1.5u vooraf: Licht verteerbaar ontbijt/lunch (Licht brood met jam/pindakaas of Havermout).',
+          preWorkout: '1.5u vooraf: Licht verteerbaar ontbijt/lunch (Licht brood met jam/pindakaas).',
           carbsHour: '45g - 60g KH / uur',
           hydratatie: '1x Bidon 750ml Iso-drink met elektrolyten',
           advies: '1x Iso-gel of banaan na 45 minuten.',
@@ -195,11 +198,11 @@ export default function Home() {
       if (isUltraRun) {
         const totalGels = Math.round((isKm ? numVal / 7 : numVal * 2.5))
         return {
-          preWorkout: '3u vooraf: Vet- en vezelarme koolhydraatrijke maaltijd (MM Witte rijst met magere kip of pannenkoeken met stroop). 45 min vooraf: 500ml water met elektrolyten.',
+          preWorkout: '3u vooraf: Vet- en vezelarme koolhydraatrijke maaltijd (MM Witte rijst met kip). 45 min vooraf: 500ml water.',
           carbsHour: '60g - 90g KH / uur',
           hydratatie: '500ml - 750ml Water/Iso met elektrolytentabletten per uur',
-          advies: `Elke 20-25 min 1x Isotonische Gel (Totaal ca. ${totalGels} gels over de rit). Wissel af met banaan/rijsttaartje voor maagcomfort.`,
-          herstel: 'Direct na afloop: Herstelshake (4:1 KH/Eiwit) + 500ml vocht met zout. Warme rijst/pastamaaltijd binnen 2 uur.',
+          advies: `Elke 20-25 min 1x Isotonische Gel (Totaal ca. ${totalGels} gels). Wissel af met banaan/rijsttaartje.`,
+          herstel: 'Direct na afloop: Herstelshake + 500ml vocht. Warme rijst/pastamaaltijd binnen 2 uur.',
           gels: totalGels,
           isoServings: 2,
           cecemelLiters: 0.5
@@ -207,10 +210,10 @@ export default function Home() {
       } else if (isLongRun) {
         const totalGels = Math.round((isKm ? numVal / 8 : numVal * 1.5))
         return {
-          preWorkout: '1.5u tot 2u vooraf: Bananenpannenkoek of licht brood met honing. Vermijd veel vetten/vezels voor de maag.',
+          preWorkout: '1.5u tot 2u vooraf: Bananenpannenkoek of licht brood met honing.',
           carbsHour: '40g - 60g KH / uur',
           hydratatie: '500ml Water/Iso in softflask',
-          advies: '1x Gel om de 30 tot 40 minuten (ca. om de 6-8 km) met een slok water.',
+          advies: '1x Gel om de 30 tot 40 minuten met water.',
           herstel: '300ml Mager Cecemel / Herstelshake direct na afloop.',
           gels: Math.max(1, totalGels),
           isoServings: 1,
@@ -218,10 +221,10 @@ export default function Home() {
         }
       } else {
         return {
-          preWorkout: '1u vooraf: 1 Banaan of 2 sneden peperkoek.',
+          preWorkout: '1u vooraf: 1 Banaan of peperkoek.',
           carbsHour: '20g - 30g KH (Optioneel)',
           hydratatie: '500ml Water met elektrolyten',
-          advies: 'Korte duurloop: Geen gels nodig gedurende de run.',
+          advies: 'Korte duurloop: Geen gels nodig tijdens het lopen.',
           herstel: 'Normale eiwitrijke herstelmaaltijd (Mager kwark of MM Kip).',
           gels: 0,
           isoServings: 0,
@@ -230,11 +233,11 @@ export default function Home() {
       }
     } else if (type === 'Zwemmen') {
       return {
-        preWorkout: '45 min vooraf: Fast-carb snack (Banaan, ontbijtkoek of 1x Iso-gel).',
+        preWorkout: '45 min vooraf: Fast-carb snack (Banaan of 1x Gel).',
         carbsHour: '30g KH vooraf',
         hydratatie: '1x Bidon Water aan de rand van het zwembad',
         advies: 'Geen vaste voeding in het water.',
-        herstel: 'Eiwitrijke herstelmaaltijd binnen 45 min na de duik.',
+        herstel: 'Eiwitrijke herstelmaaltijd binnen 45 min.',
         gels: 0,
         isoServings: 0,
         cecemelLiters: 0
@@ -278,7 +281,29 @@ export default function Home() {
 
   const fetchAllFeedback = async () => {
     const { data } = await supabase.from('feedback').select('*').order('created_at', { ascending: false })
-    if (data) setFeedbackList(data)
+    if (data) {
+      setFeedbackList(data)
+      setUnreadFeedbackCount(data.length)
+    }
+  }
+
+  const markFeedbackAsRead = () => {
+    setUnreadFeedbackCount(0)
+  }
+
+  const deleteSchedule = async (dateStr) => {
+    if (!window.confirm(`Weet je zeker dat je de training van ${dateStr} wilt verwijderen?`)) return
+
+    const { error } = await supabase.from('schedules').delete().eq('date_str', dateStr)
+    if (error) {
+      alert(`Fout bij verwijderen: ${error.message}`)
+    } else {
+      alert(`Training van ${dateStr} succesvol verwijderd!`)
+      fetchSchedules()
+      if (selectedDayDetail && selectedDayDetail.dateStr === dateStr) {
+        setSelectedDayDetail(null)
+      }
+    }
   }
 
   useEffect(() => {
@@ -580,7 +605,7 @@ export default function Home() {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
 
-        {/* TAB 1: COACH MODE MET LIVE DYNAMISCH VOLUME & VERDELING */}
+        {/* TAB 1: COACH MODE */}
         {activeTab === 'coach' && isCoachOrAdmin && (
           <div>
             <div style={{ fontWeight: '800', fontSize: '1.1rem', color: '#0f172a', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
@@ -588,7 +613,6 @@ export default function Home() {
               <span style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: '700' }}>Coach Dashboard (Kaat)</span>
             </div>
 
-            {/* LIVE VOORRAAD & TRAININGSSINFORMATIE */}
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginBottom: '12px' }}>📈 Weekvolume & Intensiteitsbelasting (Live Berekend)</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '12px' }}>
@@ -597,14 +621,17 @@ export default function Home() {
                   <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#1e3a8a' }}>{weeklyVolume.total} Uur</div>
                   <div style={{ fontSize: '0.7rem', color: '#3b82f6', marginTop: '4px' }}>⚡ Lopen: {weeklyVolume.run}u | Fietsen: {weeklyVolume.bike}u | Zwemmen: {weeklyVolume.swim}u</div>
                 </div>
-                <div style={{ background: '#f0fdf4', padding: '12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#166534' }}>RPE FEEDBACKS ONTVANGEN</span>
-                  <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#14532d' }}>{feedbackList.length} Inzendingen</div>
-                  <div style={{ fontSize: '0.7rem', color: '#16a34a', marginTop: '4px' }}>✅ Feedback over de belasting direct beschikbaar</div>
+                
+                {/* DYNAMISCHE MELDINGENBLOK - MET MARKEER ALS GELEZEN */}
+                <div style={{ background: unreadFeedbackCount > 0 ? '#f0fdf4' : '#f8fafc', padding: '12px', borderRadius: '8px', border: unreadFeedbackCount > 0 ? '1px solid #bbf7d0' : '1px solid #e2e8f0' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: '700', color: unreadFeedbackCount > 0 ? '#166534' : '#64748b' }}>RPE FEEDBACKS ONTVANGEN</span>
+                  <div style={{ fontSize: '1.4rem', fontWeight: '800', color: unreadFeedbackCount > 0 ? '#14532d' : '#0f172a' }}>{unreadFeedbackCount} Nieuwe Inzendingen</div>
+                  <div style={{ fontSize: '0.7rem', color: unreadFeedbackCount > 0 ? '#16a34a' : '#64748b', marginTop: '4px' }}>
+                    {unreadFeedbackCount > 0 ? '✅ Feedback over de belasting direct beschikbaar' : 'Geen nieuwe ongelezen meldingen.'}
+                  </div>
                 </div>
               </div>
 
-              {/* DYNAMISCHE DUS PROPORTIONELE VERDELINGSBALK */}
               <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: '700', marginBottom: '6px' }}>
                   <span>Proportionele Sporttak Verdeling</span>
@@ -618,8 +645,16 @@ export default function Home() {
               </div>
             </div>
 
+            {/* INGEZONDEN FEEDBACK MET MARKEER ALS GELEZEN KNOP */}
             <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#166534', marginBottom: '12px' }}>📩 Ontvangen Feedback van Liesbeth ({feedbackList.length})</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#166534', margin: 0 }}>📩 Ontvangen Feedback van Liesbeth ({feedbackList.length})</h3>
+                {unreadFeedbackCount > 0 && (
+                  <button onClick={markFeedbackAsRead} style={{ background: '#166534', color: 'white', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>
+                    ✓ Markeer als gelezen
+                  </button>
+                )}
+              </div>
               {feedbackList.length === 0 ? (
                 <p style={{ color: '#166534', fontSize: '0.85rem', margin: 0 }}>Nog geen feedback ontvangen van Liesbeth.</p>
               ) : (
@@ -694,9 +729,17 @@ export default function Home() {
         {activeTab === 'vandaag' && (
           <div>
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>
-                🚴‍♀️ Training voor Liesbeth — {currentActiveDay} ({todayFormattedDate})
-              </h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                  🚴‍♀️ Training voor Liesbeth — {currentActiveDay} ({todayFormattedDate})
+                </h3>
+                {currentTodaySchedule.type && currentTodaySchedule.type !== 'Nog niet ingepland' && isCoachOrAdmin && (
+                  <button onClick={() => deleteSchedule(todayFormattedDate)} style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>
+                    🗑️ Verwijderen
+                  </button>
+                )}
+              </div>
+
               <div style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '4px', color: currentTodaySchedule.type === 'Nog niet ingepland' ? '#94a3b8' : '#0f172a' }}>
                 {currentTodaySchedule.type} {currentTodaySchedule.duration && `(${currentTodaySchedule.duration})`}
               </div>
@@ -740,7 +783,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: WEEKPLANNING */}
+        {/* TAB: WEEKPLANNING MET KLIKBARE DAGEN & DETAIL MODAL */}
         {activeTab === 'week' && (
           <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
@@ -761,7 +804,11 @@ export default function Home() {
                 const fuel = calculateFuelStrategy(info.type, info.duration)
 
                 return (
-                  <div key={day} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
+                  <div 
+                    key={day} 
+                    onClick={() => setSelectedDayDetail({ day, dateStr, info, fuel })}
+                    style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', cursor: 'pointer', transition: 'all 0.15s ease' }}
+                  >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '2px solid #e2e8f0', paddingBottom: '6px' }}>
                       <span style={{ fontWeight: '800', fontSize: '0.95rem', color: '#0f172a' }}>{day}</span>
                       <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#2563eb', background: '#eff6ff', padding: '2px 8px', borderRadius: '6px' }}>{dateStr}</span>
@@ -775,9 +822,59 @@ export default function Home() {
                         <strong>🍼 Tijdens:</strong> {fuel.carbsHour} ({fuel.advies})
                       </div>
                     )}
+                    <div style={{ marginTop: '8px', textAlign: 'right', fontSize: '0.72rem', color: '#2563eb', fontWeight: '700' }}>🔍 Klik voor details & opties →</div>
                   </div>
                 )
               })}
+            </div>
+          </div>
+        )}
+
+        {/* DETAIL POP-UP MODAL VOOR GEKOZEN DAG IN DE WEEKPLANNING */}
+        {selectedDayDetail && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '16px' }}>
+            <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', maxWidth: '500px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '2px solid #f1f5f9', paddingBottom: '8px' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                  📅 {selectedDayDetail.day} ({selectedDayDetail.dateStr})
+                </h3>
+                <button onClick={() => setSelectedDayDetail(null)} style={{ background: '#f1f5f9', border: 'none', fontSize: '1rem', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontWeight: '700' }}>✕</button>
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>🏋️ Training: {selectedDayDetail.info.type} {selectedDayDetail.info.duration && `(${selectedDayDetail.info.duration})`}</strong>
+                <p style={{ fontSize: '0.85rem', color: '#334155', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '6px', whiteSpace: 'pre-line' }}>
+                  {selectedDayDetail.info.target || 'Geen specifieke doelen ingevoerd.'}
+                </p>
+              </div>
+
+              {selectedDayDetail.info.note && (
+                <div style={{ fontSize: '0.82rem', color: '#1e293b', background: '#eff6ff', padding: '8px', borderRadius: '6px', border: '1px solid #bfdbfe', marginBottom: '12px' }}>
+                  💬 <strong>Instructies van Kaat:</strong> "{selectedDayDetail.info.note}"
+                </div>
+              )}
+
+              {selectedDayDetail.info.type && selectedDayDetail.info.type !== 'Nog niet ingepland' && selectedDayDetail.info.type !== 'Rustdag' && (
+                <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '10px', padding: '12px', marginBottom: '16px' }}>
+                  <div style={{ fontWeight: '800', color: '#065f46', fontSize: '0.85rem', marginBottom: '6px' }}>🍼 Voedings- & Hydratatieschema:</div>
+                  <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.8rem', color: '#047857', display: 'grid', gap: '4px' }}>
+                    <li>🥣 <strong>Pre-Workout:</strong> {selectedDayDetail.fuel.preWorkout}</li>
+                    <li>⚡ <strong>Koolhydraten:</strong> {selectedDayDetail.fuel.carbsHour}</li>
+                    <li>💧 <strong>Hydratatie:</strong> {selectedDayDetail.fuel.hydratatie}</li>
+                    <li>🍌 <strong>Inname Advies:</strong> {selectedDayDetail.fuel.advies}</li>
+                    {selectedDayDetail.fuel.herstel && <li>🥛 <strong>Post-Workout:</strong> {selectedDayDetail.fuel.herstel}</li>}
+                  </ul>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                {selectedDayDetail.info.type && selectedDayDetail.info.type !== 'Nog niet ingepland' && isCoachOrAdmin && (
+                  <button onClick={() => deleteSchedule(selectedDayDetail.dateStr)} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '8px 12px', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', fontSize: '0.8rem' }}>
+                    🗑️ Training Verwijderen
+                  </button>
+                )}
+                <button onClick={() => setSelectedDayDetail(null)} style={{ background: '#2563eb', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', fontSize: '0.8rem' }}>Sluiten</button>
+              </div>
             </div>
           </div>
         )}
@@ -926,7 +1023,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: GEZONDHEID & GEWICHTS- / VETPERCENTAGELOGBOEK */}
+        {/* TAB: GEZONDHEID */}
         {activeTab === 'gezondheid' && (
           <div>
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
