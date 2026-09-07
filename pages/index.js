@@ -61,8 +61,7 @@ export default function Home() {
   const [weightInput, setWeightInput] = useState('')
   const [fatInput, setFatInput] = useState('')
   const [healthLogs, setHealthLogs] = useState([
-    { date: '07/09/2026', weight: '62.5', fat: '18.2' },
-    { date: '01/09/2026', weight: '62.8', fat: '18.5' }
+    { date: '07/09/2026', weight: '62.5', fat: '18.2' }
   ])
 
   // Recepten
@@ -107,7 +106,44 @@ export default function Home() {
     setWeekDates(computeClientWeekDates(weekOffset))
   }, [weekOffset])
 
-  // Slimme uitbreiding: Pre-Workout, Intra-Workout en Post-Workout advies
+  // DYNAMISCHE BEREKENING VAN VOLUMES EN SPORTTAK-VERDELING
+  const calculateWeeklyVolume = () => {
+    let runHours = 0
+    let bikeHours = 0
+    let swimHours = 0
+    let otherHours = 0
+
+    WEEKDAYS.forEach(day => {
+      const dateStr = weekDates[day]
+      const schedule = dbSchedules[dateStr]
+      if (schedule && schedule.duration) {
+        const matches = schedule.duration.match(/\d+(\.\d+)?/g)
+        let num = matches ? parseFloat(matches[0]) : 0
+        const isKm = schedule.duration.toLowerCase().includes('km')
+
+        if (schedule.type === 'Lopen') {
+          runHours += isKm ? num / 10 : num // Ongeveer 10 km/u als omrekening
+        } else if (schedule.type === 'Fietsen' || schedule.type === 'Koppeltraining') {
+          bikeHours += isKm ? num / 28 : num // Ongeveer 28 km/u
+        } else if (schedule.type === 'Zwemmen') {
+          swimHours += isKm ? num / 2.5 : num // Ongeveer 2.5 km/u
+        } else {
+          otherHours += num
+        }
+      }
+    })
+
+    const total = runHours + bikeHours + swimHours + otherHours
+    return {
+      total: Math.round(total * 10) / 10,
+      run: Math.round(runHours * 10) / 10,
+      bike: Math.round(bikeHours * 10) / 10,
+      swim: Math.round(swimHours * 10) / 10
+    }
+  }
+
+  const weeklyVolume = calculateWeeklyVolume()
+
   const calculateFuelStrategy = (type, durationStr) => {
     if (!type || type === 'Nog niet ingepland' || type === 'Rustdag') {
       return { 
@@ -544,7 +580,7 @@ export default function Home() {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
 
-        {/* TAB 1: COACH MODE INCLUSIEF VISUELE BELASTINGGRAFIEKEN */}
+        {/* TAB 1: COACH MODE MET LIVE DYNAMISCH VOLUME & VERDELING */}
         {activeTab === 'coach' && isCoachOrAdmin && (
           <div>
             <div style={{ fontWeight: '800', fontSize: '1.1rem', color: '#0f172a', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
@@ -552,32 +588,32 @@ export default function Home() {
               <span style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: '700' }}>Coach Dashboard (Kaat)</span>
             </div>
 
-            {/* VISUELE BELASTING & VOLUME GRAFIEKEN */}
+            {/* LIVE VOORRAAD & TRAININGSSINFORMATIE */}
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginBottom: '12px' }}>📈 Weekvolume & Intensiteitsbelasting</h3>
+              <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginBottom: '12px' }}>📈 Weekvolume & Intensiteitsbelasting (Live Berekend)</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ background: '#eff6ff', padding: '12px', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
                   <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#1e40af' }}>TOTAAL GEPLAND VOLUME</span>
-                  <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#1e3a8a' }}>8.5 Uur</div>
-                  <div style={{ fontSize: '0.7rem', color: '#3b82f6', marginTop: '4px' }}>⚡ Lopen: 3.5u | Fietsen: 4u | Zwemmen: 1u</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#1e3a8a' }}>{weeklyVolume.total} Uur</div>
+                  <div style={{ fontSize: '0.7rem', color: '#3b82f6', marginTop: '4px' }}>⚡ Lopen: {weeklyVolume.run}u | Fietsen: {weeklyVolume.bike}u | Zwemmen: {weeklyVolume.swim}u</div>
                 </div>
                 <div style={{ background: '#f0fdf4', padding: '12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#166534' }}>GEMIDDELDE RPE ERVAREN</span>
-                  <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#14532d' }}>6.2 / 10</div>
-                  <div style={{ fontSize: '0.7rem', color: '#16a34a', marginTop: '4px' }}>✅ Binnen optimale Zone 2/3 herstelindex</div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#166534' }}>RPE FEEDBACKS ONTVANGEN</span>
+                  <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#14532d' }}>{feedbackList.length} Inzendingen</div>
+                  <div style={{ fontSize: '0.7rem', color: '#16a34a', marginTop: '4px' }}>✅ Feedback over de belasting direct beschikbaar</div>
                 </div>
               </div>
 
-              {/* VISUELE VOORTGANGSBALK */}
+              {/* DYNAMISCHE DUS PROPORTIONELE VERDELINGSBALK */}
               <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: '700', marginBottom: '6px' }}>
-                  <span>Trainingsbelasting Verdeling</span>
-                  <span>75% Voltooid</span>
+                  <span>Proportionele Sporttak Verdeling</span>
+                  <span>{weeklyVolume.total > 0 ? 'Actieve trainingsweek' : 'Geen trainingen deze week'}</span>
                 </div>
                 <div style={{ width: '100%', height: '10px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden', display: 'flex' }}>
-                  <div style={{ width: '45%', background: '#2563eb' }} title="Lopen"></div>
-                  <div style={{ width: '35%', background: '#16a34a' }} title="Fietsen"></div>
-                  <div style={{ width: '20%', background: '#d97706' }} title="Zwemmen"></div>
+                  <div style={{ width: `${weeklyVolume.total > 0 ? (weeklyVolume.run / weeklyVolume.total) * 100 : 0}%`, background: '#2563eb' }} title="Lopen"></div>
+                  <div style={{ width: `${weeklyVolume.total > 0 ? (weeklyVolume.bike / weeklyVolume.total) * 100 : 0}%`, background: '#16a34a' }} title="Fietsen"></div>
+                  <div style={{ width: `${weeklyVolume.total > 0 ? (weeklyVolume.swim / weeklyVolume.total) * 100 : 0}%`, background: '#d97706' }} title="Zwemmen"></div>
                 </div>
               </div>
             </div>
@@ -654,7 +690,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: VANDAAG INKLUSIEF AUTOMATISCH PRE-WORKOUT VOEDINGSADVIES */}
+        {/* TAB: VANDAAG */}
         {activeTab === 'vandaag' && (
           <div>
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
@@ -704,7 +740,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: WEEKPLANNING MET PRE-WORKOUT AUTOMATISERINGSVOORSTEL */}
+        {/* TAB: WEEKPLANNING */}
         {activeTab === 'week' && (
           <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
