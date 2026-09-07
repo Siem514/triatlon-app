@@ -526,6 +526,7 @@ export default function Home() {
     )
   }
 
+  // STRIKTE ROLAFSCHERMING VOOR LIESBETH
   const userEmail = user?.email?.toLowerCase() || ''
   const isLiesbethUser = userEmail.includes('liesbeth')
   const dbRole = profile?.role
@@ -541,7 +542,9 @@ export default function Home() {
 
   const filteredIngredients = INGREDIENT_DATABASE.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  )return (
+  )
+
+  return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: '#1e293b' }}>
       
       {/* Header */}
