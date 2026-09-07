@@ -142,8 +142,7 @@ export default function Home() {
       total: Math.round(total * 10) / 10,
       run: Math.round(runHours * 10) / 10,
       bike: Math.round(bikeHours * 10) / 10,
-      swim: Math.round(swimHours * 10) / 10,
-      other: Math.round(otherHours * 10) / 10
+      swim: Math.round(swimHours * 10) / 10
     }
   }
 
@@ -496,7 +495,7 @@ export default function Home() {
     setMealLibrary(prev => [...prev, newMeal])
     setNewMealName('')
     setSelectedIngredients([])
-    alert('Gerechten toegevoegd aan bibliotheek!')
+    alert('Gerecht toegevoegd aan bibliotheek!')
   }
 
   if (!user) {
@@ -527,15 +526,12 @@ export default function Home() {
     )
   }
 
-  // STRIKTE ROLAFSCHERMING VOOR LIESBETH
   const userEmail = user?.email?.toLowerCase() || ''
   const isLiesbethUser = userEmail.includes('liesbeth')
   const dbRole = profile?.role
   
-  // Liesbeth mag NOOIT de coach mode zien of openen
   const isCoachOrAdmin = !isLiesbethUser && (dbRole === 'COACH' || dbRole === 'ADMIN')
 
-  // Mocht Liesbeth ooit de coach-tab geopend hebben, stuur haar automatisch terug naar 'vandaag'
   if (isLiesbethUser && activeTab === 'coach') {
     setActiveTab('vandaag')
   }
@@ -545,9 +541,7 @@ export default function Home() {
 
   const filteredIngredients = INGREDIENT_DATABASE.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
-  return (
+  )return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: '#1e293b' }}>
       
       {/* Header */}
@@ -628,7 +622,6 @@ export default function Home() {
               <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginBottom: '12px' }}>📈 Weekvolume & Belasting</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '12px' }}>
                 
-                {/* KLIKBARE KNOP VOOR GRAFIEKEN PER SPORT */}
                 <button
                   onClick={() => setActiveTab('statistieken')}
                   style={{
@@ -746,10 +739,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* VISUELE GRAFIEKEN PER SPORT */}
               <div style={{ display: 'grid', gap: '16px' }}>
-                
-                {/* LOPEN */}
                 <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                     <span style={{ fontWeight: '800', color: '#1e40af', fontSize: '0.95rem' }}>🏃 Lopen</span>
@@ -760,7 +750,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* FIETSEN */}
                 <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                     <span style={{ fontWeight: '800', color: '#15803d', fontSize: '0.95rem' }}>🚴 Fietsen & Koppeltraining</span>
@@ -771,7 +760,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* ZWEMMEN */}
                 <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                     <span style={{ fontWeight: '800', color: '#b45309', fontSize: '0.95rem' }}>🏊 Zwemmen</span>
@@ -781,7 +769,6 @@ export default function Home() {
                     <div style={{ width: `${weeklyVolume.total > 0 ? (weeklyVolume.swim / weeklyVolume.total) * 100 : 0}%`, height: '100%', background: '#d97706', borderRadius: '999px', transition: 'width 0.4s ease' }}></div>
                   </div>
                 </div>
-
               </div>
             </div>
           </div>
@@ -1135,4 +1122,28 @@ export default function Home() {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>VETPERCENTAGE (%)</label>
-                  <input type="number" step="0.1" value={fatInput} onChange={(e) => setFatInput(e.target.value)} placeholder="bijv. 18.2" style={{ width: '100%', padding: '8px
+                  <input type="number" step="0.1" value={fatInput} onChange={(e) => setFatInput(e.target.value)} placeholder="bijv. 18.2" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+                </div>
+              </div>
+
+              <button onClick={addHealthLog} style={{ width: '100%', background: '#2563eb', color: 'white', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>Meting Opslaan</button>
+            </div>
+
+            <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>📜 Historie van Metingen ({healthLogs.length})</h3>
+              <div style={{ display: 'grid', gap: '8px' }}>
+                {healthLogs.map((log, idx) => (
+                  <div key={idx} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '10px 14px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>{log.date}</strong>
+                    <span style={{ fontSize: '0.82rem', color: '#334155' }}>⚖️ <strong>{log.weight} kg</strong> &nbsp;|&nbsp; 💧 <strong>{log.fat}% vet</strong></span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}
