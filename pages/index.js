@@ -52,11 +52,12 @@ export default function Home() {
   const [coachRunPace, setCoachRunPace] = useState('')
   const [coachNotes, setCoachNotes] = useState('')
 
-  // Feedback & Meldingen
+  // Feedback & Meldingen Modals
   const [rpeScore, setRpeScore] = useState('5')
   const [coachFeedback, setCoachFeedback] = useState('')
   const [feedbackList, setFeedbackList] = useState([])
   const [unreadFeedbackCount, setUnreadFeedbackCount] = useState(0)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
 
   // Detailvenster Pop-up State
   const [selectedDayDetail, setSelectedDayDetail] = useState(null)
@@ -608,13 +609,14 @@ export default function Home() {
         {/* TAB 1: COACH MODE */}
         {activeTab === 'coach' && isCoachOrAdmin && (
           <div>
-            <div style={{ fontWeight: '800', fontSize: '1.1rem', color: '#0f172a', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
+            <div style={{ fontWeight: '800', fontSize: '1.1rem', color: '#0f172a', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>📊 Belasting & Progressie van Liesbeth</span>
               <span style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: '700' }}>Coach Dashboard (Kaat)</span>
             </div>
 
+            {/* LIVE VOLUME & KNOP VOOR FEEDBACK (VERBORGEN ACHTER KNOP) */}
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginBottom: '12px' }}>📈 Weekvolume & Intensiteitsbelasting (Live Berekend)</h3>
+              <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginBottom: '12px' }}>📈 Weekvolume & Belasting (Live Berekend)</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ background: '#eff6ff', padding: '12px', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
                   <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#1e40af' }}>TOTAAL GEPLAND VOLUME</span>
@@ -622,14 +624,19 @@ export default function Home() {
                   <div style={{ fontSize: '0.7rem', color: '#3b82f6', marginTop: '4px' }}>⚡ Lopen: {weeklyVolume.run}u | Fietsen: {weeklyVolume.bike}u | Zwemmen: {weeklyVolume.swim}u</div>
                 </div>
                 
-                {/* DYNAMISCHE MELDINGENBLOK - MET MARKEER ALS GELEZEN */}
-                <div style={{ background: unreadFeedbackCount > 0 ? '#f0fdf4' : '#f8fafc', padding: '12px', borderRadius: '8px', border: unreadFeedbackCount > 0 ? '1px solid #bbf7d0' : '1px solid #e2e8f0' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: '700', color: unreadFeedbackCount > 0 ? '#166534' : '#64748b' }}>RPE FEEDBACKS ONTVANGEN</span>
-                  <div style={{ fontSize: '1.4rem', fontWeight: '800', color: unreadFeedbackCount > 0 ? '#14532d' : '#0f172a' }}>{unreadFeedbackCount} Nieuwe Inzendingen</div>
-                  <div style={{ fontSize: '0.7rem', color: unreadFeedbackCount > 0 ? '#16a34a' : '#64748b', marginTop: '4px' }}>
-                    {unreadFeedbackCount > 0 ? '✅ Feedback over de belasting direct beschikbaar' : 'Geen nieuwe ongelezen meldingen.'}
+                {/* KNOP OM FEEDBACK INTERACTIEF TE OPENEN (EN NINET OP DE PAGINA) */}
+                <button 
+                  onClick={() => setShowFeedbackModal(true)}
+                  style={{ background: unreadFeedbackCount > 0 ? '#ecfdf5' : '#f8fafc', padding: '12px', borderRadius: '8px', border: unreadFeedbackCount > 0 ? '2px solid #10b981' : '1px solid #e2e8f0', textAlign: 'left', cursor: 'pointer' }}
+                >
+                  <span style={{ fontSize: '0.75rem', fontWeight: '700', color: unreadFeedbackCount > 0 ? '#065f46' : '#64748b' }}>📩 RPE FEEDBACK BERICHTEN</span>
+                  <div style={{ fontSize: '1.2rem', fontWeight: '800', color: unreadFeedbackCount > 0 ? '#047857' : '#0f172a', marginTop: '2px' }}>
+                    {unreadFeedbackCount > 0 ? `💬 ${unreadFeedbackCount} Nieuwe Inzending(en)` : ' Bekijk Alle Feedback'}
                   </div>
-                </div>
+                  <div style={{ fontSize: '0.7rem', color: unreadFeedbackCount > 0 ? '#10b981' : '#64748b', marginTop: '4px', fontWeight: '700' }}>
+                    Click om te openen →
+                  </div>
+                </button>
               </div>
 
               <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
@@ -643,33 +650,6 @@ export default function Home() {
                   <div style={{ width: `${weeklyVolume.total > 0 ? (weeklyVolume.swim / weeklyVolume.total) * 100 : 0}%`, background: '#d97706' }} title="Zwemmen"></div>
                 </div>
               </div>
-            </div>
-
-            {/* INGEZONDEN FEEDBACK MET MARKEER ALS GELEZEN KNOP */}
-            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#166534', margin: 0 }}>📩 Ontvangen Feedback van Liesbeth ({feedbackList.length})</h3>
-                {unreadFeedbackCount > 0 && (
-                  <button onClick={markFeedbackAsRead} style={{ background: '#166534', color: 'white', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>
-                    ✓ Markeer als gelezen
-                  </button>
-                )}
-              </div>
-              {feedbackList.length === 0 ? (
-                <p style={{ color: '#166534', fontSize: '0.85rem', margin: 0 }}>Nog geen feedback ontvangen van Liesbeth.</p>
-              ) : (
-                <div style={{ display: 'grid', gap: '8px' }}>
-                  {feedbackList.map(item => (
-                    <div key={item.id} style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>{item.day_name}</strong>
-                        <span style={{ fontSize: '0.75rem', background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '6px', fontWeight: '700' }}>RPE: {item.rpe}/10</span>
-                      </div>
-                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#334155' }}>"{item.comments || 'Geen opmerking ingevoerd.'}"</p>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
@@ -721,6 +701,43 @@ export default function Home() {
               </div>
 
               <button onClick={saveCoachPlan} style={{ width: '100%', background: '#2563eb', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>Opslaan op Datum in Supabase</button>
+            </div>
+          </div>
+        )}
+
+        {/* FEEDBACK MODAL POP-UP (ACHTER DE KNOP GEPLAATST) */}
+        {showFeedbackModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '16px' }}>
+            <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', maxWidth: '550px', width: '100%', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '2px solid #f1f5f9', paddingBottom: '8px' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#166534', margin: 0 }}>
+                  📩 Ontvangen Feedback van Liesbeth ({feedbackList.length})
+                </h3>
+                <button onClick={() => { markFeedbackAsRead(); setShowFeedbackModal(false); }} style={{ background: '#f1f5f9', border: 'none', fontSize: '1rem', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontWeight: '700' }}>✕</button>
+              </div>
+
+              {feedbackList.length === 0 ? (
+                <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Nog geen feedback ontvangen van Liesbeth.</p>
+              ) : (
+                <div style={{ display: 'grid', gap: '10px', marginBottom: '16px' }}>
+                  {feedbackList.map(item => (
+                    <div key={item.id} style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>{item.day_name}</strong>
+                        <span style={{ fontSize: '0.75rem', background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '6px', fontWeight: '700' }}>RPE: {item.rpe}/10</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155' }}>"{item.comments || 'Geen opmerking ingevoerd.'}"</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <button onClick={markFeedbackAsRead} style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '8px 12px', borderRadius: '6px', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' }}>
+                  ✓ Markeer alles als gelezen
+                </button>
+                <button onClick={() => setShowFeedbackModal(false)} style={{ background: '#2563eb', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' }}>Sluiten</button>
+              </div>
             </div>
           </div>
         )}
@@ -783,7 +800,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: WEEKPLANNING MET KLIKBARE DAGEN & DETAIL MODAL */}
+        {/* TAB: WEEKPLANNING */}
         {activeTab === 'week' && (
           <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
