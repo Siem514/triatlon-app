@@ -52,6 +52,14 @@ export default function Home() {
   const [coachRunPace, setCoachRunPace] = useState('')
   const [coachNotes, setCoachNotes] = useState('')
 
+  // Wedstrijdkalender state
+  const [racesList, setRacesList] = useState([])
+  const [newRaceName, setNewRaceName] = useState('')
+  const [newRaceDate, setNewRaceDate] = useState('')
+  const [newRaceLocation, setNewRaceLocation] = useState('')
+  const [newRaceType, setNewRaceType] = useState('70.3 Ironman')
+  const [showAddRaceModal, setShowAddRaceModal] = useState(false)
+
   // Feedback & Meldingen Modals
   const [rpeScore, setRpeScore] = useState('5')
   const [coachFeedback, setCoachFeedback] = useState('')
@@ -105,6 +113,11 @@ export default function Home() {
       })
       setDbSchedules(scheduleMap)
     }
+  }
+
+  const fetchRaces = async () => {
+    const { data } = await supabase.from('races').select('*').order('race_date', { ascending: true })
+    if (data) setRacesList(data)
   }
 
   useEffect(() => {
@@ -292,6 +305,43 @@ export default function Home() {
     setUnreadFeedbackCount(0)
   }
 
+  const saveRace = async () => {
+    if (!newRaceName || !newRaceDate) {
+      alert('Vul a.u.b. ten minste de naam en datum van de wedstrijd in.')
+      return
+    }
+
+    const { error } = await supabase.from('races').insert([
+      {
+        race_name: newRaceName,
+        race_date: newRaceDate,
+        location: newRaceLocation || '-',
+        distance_type: newRaceType
+      }
+    ])
+
+    if (error) {
+      alert(`Fout bij toevoegen: ${error.message}`)
+    } else {
+      alert(`Wedstrijd "${newRaceName}" opgeslagen!`)
+      setNewRaceName('')
+      setNewRaceDate('')
+      setNewRaceLocation('')
+      setShowAddRaceModal(false)
+      fetchRaces()
+    }
+  }
+
+  const deleteRace = async (id) => {
+    if (!window.confirm('Weet je zeker dat je deze wedstrijd wilt verwijderen?')) return
+    const { error } = await supabase.from('races').delete().eq('id', id)
+    if (error) {
+      alert(`Fout bij verwijderen: ${error.message}`)
+    } else {
+      fetchRaces()
+    }
+  }
+
   const deleteSchedule = async (dateStr) => {
     if (!window.confirm(`Weet je zeker dat je de training van ${dateStr} wilt verwijderen?`)) return
 
@@ -324,6 +374,7 @@ export default function Home() {
 
     fetchSchedules()
     fetchAllFeedback()
+    fetchRaces()
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -814,9 +865,49 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB: VANDAAG */}
+        {/* TAB: VANDAAG & WEDSTRIJDKALENDER */}
         {activeTab === 'vandaag' && (
           <div>
+            
+            {/* WEDSTRIJDKALENDER SECTIE OP HOOFDPAGINA */}
+            <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', borderRadius: '12px', padding: '18px', color: '#ffffff', marginBottom: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: '800', margin: 0, color: '#ffffff' }}>🏆 Wedstrijdkalender & Doelen</h3>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#c7d2fe' }}>Gezamenlijk overzicht voor Liesbeth & Kaat</p>
+                </div>
+                {isCoachOrAdmin && (
+                  <button onClick={() => setShowAddRaceModal(true)} style={{ background: '#4f46e5', color: '#ffffff', border: '1px solid #6366f1', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' }}>
+                    + Wedstrijd Toevoegen
+                  </button>
+                )}
+              </div>
+
+              {racesList.length === 0 ? (
+                <div style={{ background: 'rgba(255,255,255,0.08)', padding: '12px', borderRadius: '8px', fontSize: '0.85rem', color: '#e0e7ff', textAlign: 'center' }}>
+                  Er zijn nog geen wedstrijden ingepland. {isCoachOrAdmin && 'Klik op de knop om de eerste wedstrijd toe te voegen!'}
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
+                  {racesList.map(race => (
+                    <div key={race.id} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', padding: '12px', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                        <strong style={{ fontSize: '0.95rem', color: '#ffffff' }}>{race.race_name}</strong>
+                        {isCoachOrAdmin && (
+                          <button onClick={() => deleteRace(race.id)} style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', padding: '0 4px', fontSize: '0.8rem' }}>✕</button>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#818cf8', fontWeight: '700' }}>📅 {race.race_date} | 📍 {race.location}</div>
+                      <div style={{ fontSize: '0.75rem', background: 'rgba(99, 102, 241, 0.3)', border: '1px solid #818cf8', color: '#e0e7ff', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', marginTop: '6px', fontWeight: '600' }}>
+                        🎯 {race.distance_type}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* DAGELIJKSE TRAINING */}
             <div style={{ background: '#ffffff', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
@@ -868,6 +959,47 @@ export default function Home() {
                 <textarea rows="2" value={coachFeedback} onChange={(e) => setCoachFeedback(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} placeholder="Hoe voelden de benen en de voeding?"></textarea>
               </div>
               <button onClick={submitFeedback} style={{ width: '100%', background: '#2563eb', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>Verstuur Feedback naar Kaat</button>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL WEDSTRIJD TOEVOEGEN */}
+        {showAddRaceModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '16px' }}>
+            <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', maxWidth: '450px', width: '100%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '2px solid #f1f5f9', paddingBottom: '8px' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>🏆 Nieuwe Wedstrijd Toevoegen</h3>
+                <button onClick={() => setShowAddRaceModal(false)} style={{ background: '#f1f5f9', border: 'none', fontSize: '1rem', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontWeight: '700' }}>✕</button>
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>NAAM WEDSTRIJD</label>
+                <input type="text" value={newRaceName} onChange={(e) => setNewRaceName(e.target.value)} placeholder="bijv. Ironman 70.3 Knokke-Heist" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>DATUM</label>
+                  <input type="date" value={newRaceDate} onChange={(e) => setNewRaceDate(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>TYPE / AFSTAND</label>
+                  <select value={newRaceType} onChange={(e) => setNewRaceType(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff' }}>
+                    <option>70.3 Ironman</option>
+                    <option>Volledige Ironman</option>
+                    <option>Olympische Afstand</option>
+                    <option>Sprint Triatlon</option>
+                    <option>Voorbereidingsloop / Run</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>LOCATIE</label>
+                <input type="text" value={newRaceLocation} onChange={(e) => setNewRaceLocation(e.target.value)} placeholder="bijv. Knokke / Belgie" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+              </div>
+
+              <button onClick={saveRace} style={{ width: '100%', background: '#2563eb', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>Wedstrijd Opslaan</button>
             </div>
           </div>
         )}
